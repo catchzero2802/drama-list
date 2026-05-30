@@ -3,29 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Her Drama List</title>
+  <title>Jolene's Drama List</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <!-- ─── HEADER ─────────────────────────────── -->
   <div class="page-wrap">
+
+    <!-- HEADER -->
     <header class="header">
       <div class="header-petals" id="petals"></div>
-      <h1>her <span>drama</span> list</h1>
+      <h1>Jolene's <span>drama</span> list</h1>
       <p class="subtitle">a personal collection of stories</p>
-      <div class="header-deco">✿</div>
+      <div class="header-deco" id="secretNote" onclick="revealNote()" title="✨">✿</div>
     </header>
 
-    <!-- ─── ADMIN TOGGLE ─────────────────────── -->
-    <div class="admin-bar">
-      <button class="admin-btn" id="adminToggle" onclick="openPasswordModal()">
-        🔒 manage list
-      </button>
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <button class="admin-btn" id="adminToggle" onclick="openPasswordModal()">🔒 manage list</button>
+      <div class="top-right">
+        <button class="icon-btn" onclick="randomPick()" title="Surprise me!">🎲</button>
+        <button class="icon-btn" onclick="toggleDark()" id="darkBtn" title="Toggle dark mode">🌙</button>
+      </div>
     </div>
 
-    <!-- ─── ADD PANEL (only visible when logged in) ─── -->
+    <!-- ADD PANEL -->
     <div class="add-panel" id="addPanel">
       <h3>Add a new drama ✦</h3>
       <div class="add-row">
@@ -42,44 +44,56 @@
         </select>
         <button class="btn-add" id="addBtn" onclick="addDrama()">+ Add</button>
       </div>
-      <p class="add-note">🪄 Poster fetches automatically from TMDB when you type the title</p>
-
-      <!-- BULK IMPORT -->
-      <div class="bulk-divider">
-        <span>or import a whole list at once</span>
-      </div>
+      <p class="add-note">🪄 Poster, year, country and genre fetch automatically from TMDB</p>
+      <div class="bulk-divider"><span>or import a whole list at once</span></div>
       <div class="bulk-row">
-        <textarea class="bulk-input" id="bulkInput" placeholder="Paste her drama list here, one title per line:&#10;&#10;Crash Landing on You&#10;Business Proposal&#10;My Liberation Notes&#10;Extraordinary You&#10;..."></textarea>
+        <textarea class="bulk-input" id="bulkInput" placeholder="Paste your drama list here, one title per line:&#10;&#10;Crash Landing on You&#10;Business Proposal&#10;My Liberation Notes&#10;..."></textarea>
       </div>
       <div class="bulk-footer">
-        <span class="bulk-note">📋 Paste from Notes — one drama per line. Year + poster fetch automatically.</span>
+        <span class="bulk-note">📋 One drama per line — everything else fills in automatically</span>
         <button class="btn-bulk" id="bulkBtn" onclick="bulkAdd()">Import all ✦</button>
       </div>
       <div class="bulk-progress" id="bulkProgress"></div>
     </div>
 
-    <!-- ─── STATS ROW ─────────────────────────── -->
+    <!-- STATS -->
     <div class="stats-row" id="statsRow"></div>
 
-    <!-- ─── SEARCH & FILTERS ──────────────────── -->
+    <!-- CONTROLS -->
     <div class="controls">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" placeholder="Search by title or country..." id="searchInput" oninput="render()">
+        <input type="text" placeholder="Search by title, genre or country..." id="searchInput" oninput="render()">
       </div>
-      <div class="filter-btns">
-        <button class="filter-btn active" id="sort-added"  onclick="setSort('added',this)">Recent</button>
-        <button class="filter-btn"         id="sort-alpha"  onclick="setSort('alpha',this)">A–Z</button>
-        <button class="filter-btn"         id="sort-year"   onclick="setSort('year',this)">Year</button>
-        <button class="filter-btn"         id="sort-fav"    onclick="setSort('fav',this)">★ Favs</button>
+      <div class="filter-btns" id="filterBtns">
+        <button class="filter-btn active" onclick="setSort('added',this)">Recent</button>
+        <button class="filter-btn" onclick="setSort('alpha',this)">A–Z</button>
+        <button class="filter-btn" onclick="setSort('year',this)">Year</button>
+        <button class="filter-btn" onclick="setSort('fav',this)">★ Favs</button>
+        <button class="filter-btn" onclick="setSort('rating',this)">Top Rated</button>
+        <select class="filter-select" id="statusFilter" onchange="render()">
+          <option value="">All Status</option>
+          <option value="Completed">Completed</option>
+          <option value="Watching">Watching</option>
+          <option value="Plan to Watch">Plan to Watch</option>
+          <option value="Dropped">Dropped</option>
+        </select>
+        <select class="filter-select" id="countryFilter" onchange="render()">
+          <option value="">All Countries</option>
+          <option value="Korean">🇰🇷 Korean</option>
+          <option value="Chinese">🇨🇳 Chinese</option>
+          <option value="Japanese">🇯🇵 Japanese</option>
+          <option value="Thai">🇹🇭 Thai</option>
+          <option value="Taiwanese">🇹🇼 Taiwanese</option>
+          <option value="Other">🌐 Other</option>
+        </select>
       </div>
     </div>
 
-    <!-- ─── DRAMA GRID ────────────────────────── -->
     <div class="drama-grid" id="grid"></div>
   </div>
 
-  <!-- ─── PASSWORD MODAL ───────────────────────── -->
+  <!-- PASSWORD MODAL -->
   <div class="modal-bg" id="modalBg">
     <div class="modal">
       <h3>Welcome back ✦</h3>
@@ -93,9 +107,51 @@
     </div>
   </div>
 
-  <!-- ─── TOAST NOTIFICATION ───────────────────── -->
-  <div class="toast" id="toast"></div>
+  <!-- DRAMA DETAIL MODAL -->
+  <div class="modal-bg" id="detailBg">
+    <div class="modal detail-modal">
+      <button class="close-btn" onclick="closeDetail()">✕</button>
+      <div id="detailContent"></div>
+    </div>
+  </div>
 
+  <!-- RANDOM PICK MODAL -->
+  <div class="modal-bg" id="randomBg">
+    <div class="modal">
+      <h3>🎲 Your next drama!</h3>
+      <div id="randomContent" style="margin:16px 0;text-align:center"></div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeRandom()">Maybe later</button>
+        <button class="btn-confirm" onclick="randomPick()">Pick again ✦</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BIRTHDAY NOTE -->
+  <div class="modal-bg" id="noteBg">
+    <div class="modal note-modal">
+      <div class="note-content">
+        <div class="note-emoji">🎂</div>
+        <p class="note-text">Happy Birthday Jolene</p>
+        <div class="note-stars">✨ ✨ ✨</div>
+      </div>
+      <button class="btn-confirm" style="margin-top:20px;width:100%" onclick="closeNote()">Thank you 🌸</button>
+    </div>
+  </div>
+
+  <!-- CONFETTI CANVAS -->
+  <canvas id="confetti" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;display:none"></canvas>
+
+  <!-- OST PLAYER -->
+  <div class="ost-player" id="ostPlayer" style="display:none">
+    <div class="ost-header">
+      <span id="ostTitle">🎵 OST Player</span>
+      <button onclick="closeOST()">✕</button>
+    </div>
+    <div id="ostFrame"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
   <script src="app.js" type="module"></script>
 </body>
 </html>
