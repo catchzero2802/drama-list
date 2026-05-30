@@ -3,17 +3,17 @@
    ═══════════════════════════════════════════════════════════ */
 
 // ── CONFIG — FILL THESE IN ───────────────────────────────────
-const TMDB_API_KEY   = "PASTE_YOUR_TMDB_KEY_HERE";
-const ADMIN_PASSWORD = "drama2024";
+const TMDB_API_KEY   = "ba8ddf8e7b60437308efe36024b1c3d6";
+const ADMIN_PASSWORD = "210326";
 
 const firebaseConfig = {
-  apiKey:            "PASTE_FROM_FIREBASE",
-  authDomain:        "PASTE_FROM_FIREBASE",
-  databaseURL:       "PASTE_FROM_FIREBASE",
-  projectId:         "PASTE_FROM_FIREBASE",
-  storageBucket:     "PASTE_FROM_FIREBASE",
-  messagingSenderId: "PASTE_FROM_FIREBASE",
-  appId:             "PASTE_FROM_FIREBASE"
+  apiKey: "AIzaSyBf9paX6A8wndbNXQeYop8pkfKC_vFMeOk",
+  authDomain: "drama-list-810d4.firebaseapp.com",
+  databaseURL: "https://drama-list-810d4-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "drama-list-810d4",
+  storageBucket: "drama-list-810d4.firebasestorage.app",
+  messagingSenderId: "198560796882",
+  appId: "1:198560796882:web:77b4190e79803320c3dd0b"
 };
 // ────────────────────────────────────────────────────────────
 
