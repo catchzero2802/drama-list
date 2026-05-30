@@ -8,16 +8,16 @@
 
 // ── CONFIG ── FILL THESE IN ──────────────────────────────────
 const TMDB_API_KEY    = "ba8ddf8e7b60437308efe36024b1c3d6";
-const ADMIN_PASSWORD  = "210326";   // Change this to whatever you want!
+const ADMIN_PASSWORD  = "jolene";   // Change this to whatever you want!
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBf9paX6A8wndbNXQeYop8pkfKC_vFMeOk",
-  authDomain: "drama-list-810d4.firebaseapp.com",
-  databaseURL: "https://drama-list-810d4-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "drama-list-810d4",
-  storageBucket: "drama-list-810d4.firebasestorage.app",
-  messagingSenderId: "198560796882",
-  appId: "1:198560796882:web:77b4190e79803320c3dd0b"
+  apiKey: "AIzaSyD5k6pwAwZ89dfoUfcUhwD22tcuHkR2A_A",
+  authDomain: "drama-list-e4b7a.firebaseapp.com",
+  databaseURL: "https://drama-list-e4b7a-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "drama-list-e4b7a",
+  storageBucket: "drama-list-e4b7a.firebasestorage.app",
+  messagingSenderId: "60250688988",
+  appId: "1:60250688988:web:51c318c98d4f1ce534d319"
 };
 // ─────────────────────────────────────────────────────────────
 
