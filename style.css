@@ -102,7 +102,7 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--t
 .fav-badge { position: absolute; top: 9px; right: 9px; background: rgba(255,255,255,0.92); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; backdrop-filter: blur(4px); }
 .delete-btn { position: absolute; top: 9px; left: 9px; background: rgba(255,255,255,0.92); border: none; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--accent); backdrop-filter: blur(4px); }
 .admin-mode .drama-card:hover .delete-btn { display: flex; }
-.status-badge { display: inline-block; margin-top: 5px; }
+.status-badge { display: block; margin-top: 5px; }
 .status-tag { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 50px; font-weight: 500; backdrop-filter: blur(4px); }
 .status-Completed { background: rgba(100,180,100,0.85); color: #fff; }
 .status-Watching { background: rgba(201,98,74,0.85); color: #fff; }

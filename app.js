@@ -369,8 +369,8 @@ function render() {
         <button class="delete-btn" onclick="deleteDrama('${d.id}',event)">✕</button>
         <div class="drama-info">
           <div class="drama-title">${escHtml(d.title)}</div>
-          ${d.status?`<div class="status-badge"><span class="status-tag ${statusClass}">${statusLabel}</span></div>`:""}
           <div class="genre-tags">${genreTags}</div>
+          ${d.status?`<div class="status-badge"><span class="status-tag ${statusClass}">${statusLabel}</span></div>`:""}
           <div class="drama-meta">
             <span class="drama-year">${d.year}${d.country?" · "+d.country:""}</span>
             <button class="fav-btn" onclick="toggleFav('${d.id}',event)">${d.fav?"★":"☆"}</button>
