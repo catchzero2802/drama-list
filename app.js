@@ -381,8 +381,8 @@ function render() {
       const posterHTML = d.poster?`<img class="drama-poster" src="${d.poster}" alt="${escHtml(d.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` :"";
       const phStyle = d.poster?"display:none":"";
       const starsHTML = [1,2,3,4,5].map(i=>`<span class="star">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
-      const statusLabel = d.status==="Plan to Watch"?"Plan":d.status;
-      const statusClass = d.status?`status-${d.status==="Plan to Watch"?"Plan":d.status}`:"";
+      const statusLabel = d.status || "";
+      const statusClass = d.status ? `status-${d.status.replace(/\s+/g,"")}` : "";
       const genreTags = (d.genres||[]).slice(0,2).map(g=>`<span class="genre-tag">${g}</span>`).join("");
       card.innerHTML = `
         ${posterHTML}
@@ -480,6 +480,90 @@ function spawnPetals() {
   });
 }
 
+// ── Actor Cards ───────────────────────────────────────────────
+const ACTOR_SLOTS = [
+  { key: "fav",       crown: "🌟", role: "Favourite Actor"  },
+  { key: "handsome",  crown: "👑", role: "Most Handsome"    },
+  { key: "beautiful", crown: "🌸", role: "Most Beautiful"   }
+];
+
+function renderActors() {
+  const section = document.getElementById("actorsSection");
+  if (!section) return;
+  section.innerHTML = ACTOR_SLOTS.map(slot => {
+    const a = actorData[slot.key] || {};
+    const photoHTML = a.photo
+      ? `<img src="${escHtml(a.photo)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : "";
+    const phStyle = a.photo ? "display:none" : "";
+    return `
+      <div class="actor-card">
+        <div class="actor-photo-wrap">
+          ${photoHTML}
+          <div class="actor-photo-placeholder" style="${phStyle}">${slot.crown}</div>
+          <button class="actor-edit-btn" onclick="openActorModal('${slot.key}')">✎</button>
+        </div>
+        <div class="actor-body">
+          <div class="actor-crown">${slot.crown}</div>
+          <div class="actor-role">${slot.role}</div>
+          <div class="actor-name">${escHtml(a.name || "Add actor")}</div>
+          ${a.note ? `<div class="actor-note">${escHtml(a.note)}</div>` : ""}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+let actorData = {};
+
+// load from firebase
+const actorsRef = ref(db, "actors");
+onValue(actorsRef, (snapshot) => {
+  actorData = snapshot.val() || {};
+  renderActors();
+});
+
+let currentActorSlot = "";
+
+function openActorModal(key) {
+  if (!isAdmin) return;
+  currentActorSlot = key;
+  const slot = ACTOR_SLOTS.find(s => s.key === key);
+  const a = actorData[key] || {};
+  document.getElementById("actorModalTitle").textContent = slot.crown + " " + slot.role;
+  document.getElementById("actorNameInput").value  = a.name  || "";
+  document.getElementById("actorPhotoInput").value = a.photo || "";
+  document.getElementById("actorNoteInput").value  = a.note  || "";
+  updateActorPreview();
+  document.getElementById("actorBg").classList.add("open");
+}
+
+function closeActorModal() {
+  document.getElementById("actorBg").classList.remove("open");
+}
+
+function updateActorPreview() {
+  const url = document.getElementById("actorPhotoInput").value.trim();
+  const preview = document.getElementById("actorPreviewImg");
+  const ph      = document.getElementById("actorPreviewPh");
+  if (url) {
+    preview.src = url;
+    preview.style.display = "block";
+    ph.style.display = "none";
+  } else {
+    preview.style.display = "none";
+    ph.style.display = "flex";
+  }
+}
+
+async function saveActor() {
+  const name  = document.getElementById("actorNameInput").value.trim();
+  const photo = document.getElementById("actorPhotoInput").value.trim();
+  const note  = document.getElementById("actorNoteInput").value.trim();
+  await set(ref(db, `actors/${currentActorSlot}`), { name, photo, note });
+  closeActorModal();
+  showToast("✓ Saved!");
+}
+
 // ── Event listeners ───────────────────────────────────────────
 document.getElementById("modalBg").addEventListener("click",function(e){if(e.target===this)closePasswordModal()});
 document.getElementById("detailBg").addEventListener("click",function(e){if(e.target===this)closeDetail()});
@@ -494,6 +578,8 @@ document.querySelectorAll(".filter-btn[data-sort]").forEach(btn => {
   btn.addEventListener("click", () => setSort(btn.dataset.sort, btn));
 });
 
+document.getElementById("actorBg").addEventListener("click",function(e){if(e.target===this)closeActorModal()});
+
 // ── Expose to HTML ────────────────────────────────────────────
 window.openPasswordModal=openPasswordModal; window.closePasswordModal=closePasswordModal;
 window.checkPassword=checkPassword; window.addDrama=addDrama; window.bulkAdd=bulkAdd;
@@ -504,6 +590,8 @@ window.playOST=playOST; window.closeOST=closeOST; window.randomPick=randomPick;
 window.closeRandom=closeRandom; window.toggleDark=toggleDark; window.revealNote=revealNote;
 window.closeNote=closeNote; window.setStatusFilter=setStatusFilter;
 window.setCountryFilter=setCountryFilter; window.clearFilters=clearFilters;
-window.render=render;
+window.render=render; window.openActorModal=openActorModal;
+window.closeActorModal=closeActorModal; window.saveActor=saveActor;
+window.updateActorPreview=updateActorPreview;
 
 spawnPetals();

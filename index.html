@@ -59,6 +59,12 @@
     <!-- STATS -->
     <div class="stats-row" id="statsRow"></div>
 
+    <!-- ACTOR CARDS -->
+    <div class="actors-section">
+      <h2>her favourites ✦</h2>
+      <div class="actors-grid" id="actorsSection"></div>
+    </div>
+
     <!-- CONTROLS -->
     <div class="controls">
       <div class="search-wrap">
@@ -123,6 +129,31 @@
         <button class="btn-cancel" onclick="closeRandom()">Maybe later</button>
         <button class="btn-confirm" onclick="randomPick()">Pick again ✦</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ACTOR EDIT MODAL -->
+  <div class="modal-bg" id="actorBg">
+    <div class="modal actor-modal">
+      <button class="close-btn" onclick="closeActorModal()">✕</button>
+      <h3 id="actorModalTitle">Edit Actor</h3>
+      <div class="actor-preview">
+        <img id="actorPreviewImg" style="display:none;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:50%">
+        <div id="actorPreviewPh" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px">👤</div>
+      </div>
+      <div class="actor-field">
+        <label>Name</label>
+        <input id="actorNameInput" type="text" placeholder="Actor name">
+      </div>
+      <div class="actor-field">
+        <label>Photo URL</label>
+        <input id="actorPhotoInput" type="url" placeholder="Paste image URL..." oninput="updateActorPreview()">
+      </div>
+      <div class="actor-field">
+        <label>Note</label>
+        <textarea id="actorNoteInput" placeholder="e.g. best actor ever 🌸"></textarea>
+      </div>
+      <button class="detail-save" onclick="saveActor()">Save ✦</button>
     </div>
   </div>
 

@@ -103,11 +103,11 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--t
 .delete-btn { position: absolute; top: 9px; left: 9px; background: rgba(255,255,255,0.92); border: none; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--accent); backdrop-filter: blur(4px); }
 .admin-mode .drama-card:hover .delete-btn { display: flex; }
 .status-badge { display: block; margin-top: 5px; }
-.status-tag { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 50px; font-weight: 500; backdrop-filter: blur(4px); }
-.status-Completed { background: rgba(100,180,100,0.85); color: #fff; }
-.status-Watching { background: rgba(201,98,74,0.85); color: #fff; }
-.status-Dropped { background: rgba(150,120,100,0.85); color: #fff; }
-.status-Plan { background: rgba(100,140,200,0.85); color: #fff; }
+.status-tag { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 50px; font-weight: 500; white-space: nowrap; }
+.status-Completed    { background: rgba(76,175,100,0.15); color: #2d7a3a; border: 1px solid rgba(76,175,100,0.3); }
+.status-Watching     { background: rgba(201,98,74,0.15);  color: #b5503a; border: 1px solid rgba(201,98,74,0.3); }
+.status-Dropped      { background: rgba(150,120,100,0.15);color: #7a5a48; border: 1px solid rgba(150,120,100,0.3); }
+.status-PlanToWatch  { background: rgba(80,120,200,0.15); color: #3a5fa0; border: 1px solid rgba(80,120,200,0.3); }
 .stars-row { display: flex; gap: 1px; margin-top: 3px; }
 .star { font-size: 11px; cursor: pointer; }
 .genre-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
@@ -181,14 +181,55 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--t
 .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg); padding: 13px 26px; border-radius: 50px; font-size: 14px; transition: transform 0.3s; z-index: 200; white-space: nowrap; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ACTOR CARDS */
+.actors-section { margin-bottom: 28px; }
+.actors-section h2 { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; margin-bottom: 14px; opacity: 0.85; }
+.actors-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.actor-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; text-align: center; transition: transform 0.22s, box-shadow 0.22s; }
+.actor-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.actor-photo-wrap { width: 100%; aspect-ratio: 1/1; overflow: hidden; background: linear-gradient(135deg, var(--pink), var(--gold)); position: relative; }
+.actor-photo-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.actor-photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+.actor-edit-btn { position: absolute; top: 7px; right: 7px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 26px; height: 26px; display: none; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: var(--accent); backdrop-filter: blur(4px); }
+.admin-mode .actor-card:hover .actor-edit-btn { display: flex; }
+.actor-body { padding: 10px 10px 12px; }
+.actor-crown { font-size: 13px; margin-bottom: 3px; }
+.actor-role { font-size: 10px; color: var(--accent); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.actor-name { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.2; margin-bottom: 4px; }
+.actor-note { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* ACTOR MODAL */
+.actor-modal { width: 340px; text-align: left; }
+.actor-modal h3 { font-family: 'Cormorant Garamond', serif; font-size: 22px; margin-bottom: 16px; }
+.actor-preview { width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, var(--pink), var(--gold)); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.actor-preview img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.actor-field { margin-bottom: 12px; }
+.actor-field label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.actor-field input, .actor-field textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; background: var(--bg); color: var(--text); }
+.actor-field input:focus, .actor-field textarea:focus { border-color: var(--accent); }
+.actor-field textarea { resize: vertical; min-height: 60px; }
+
+/* MOBILE IMPROVEMENTS */
 @media (max-width: 520px) {
   .header h1 { font-size: 32px; }
   .drama-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
   .add-row { flex-direction: column; }
   .year-input { max-width: 100%; }
   .controls { flex-direction: column; }
-  .filter-btns { width: 100%; justify-content: center; }
-  .detail-modal { padding: 20px; }
+  .filter-btns { width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .filter-btns::-webkit-scrollbar { display: none; }
+  .filter-btn { flex-shrink: 0; }
+  .detail-modal { padding: 20px; width: 95vw; }
   .detail-top { flex-direction: column; }
-  .ost-player { width: calc(100vw - 32px); right: 16px; }
+  .ost-player { width: calc(100vw - 32px); right: 16px; bottom: 16px; }
+  .actors-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .actor-name { font-size: 13px; }
+  .actor-note { display: none; }
+  .top-bar { flex-wrap: wrap; gap: 8px; }
+  .drama-card { border-radius: 14px; }
+  .drama-info { padding: 8px 10px 10px; }
+  .drama-title { font-size: 12px; }
+  .fav-btn { font-size: 14px; }
+  .modal { width: 92vw; padding: 24px 20px; }
+  .detail-row { flex-direction: column; }
 }
