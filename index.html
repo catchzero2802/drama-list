@@ -71,22 +71,21 @@
         <button class="filter-btn" onclick="setSort('year',this)">Year</button>
         <button class="filter-btn" onclick="setSort('fav',this)">★ Favs</button>
         <button class="filter-btn" onclick="setSort('rating',this)">Top Rated</button>
-        <select class="filter-select" id="statusFilter" onchange="render()">
-          <option value="">All Status</option>
-          <option value="Completed">Completed</option>
-          <option value="Watching">Watching</option>
-          <option value="Plan to Watch">Plan to Watch</option>
-          <option value="Dropped">Dropped</option>
-        </select>
-        <select class="filter-select" id="countryFilter" onchange="render()">
-          <option value="">All Countries</option>
-          <option value="Korean">🇰🇷 Korean</option>
-          <option value="Chinese">🇨🇳 Chinese</option>
-          <option value="Japanese">🇯🇵 Japanese</option>
-          <option value="Thai">🇹🇭 Thai</option>
-          <option value="Taiwanese">🇹🇼 Taiwanese</option>
-          <option value="Other">🌐 Other</option>
-        </select>
+      </div>
+      <div class="filter-btns" style="margin-top:8px">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;align-self:center">Status:</span>
+        <button class="filter-btn status-filter-btn" data-val="Completed"     onclick="setStatusFilter('Completed')">✅ Completed</button>
+        <button class="filter-btn status-filter-btn" data-val="Watching"      onclick="setStatusFilter('Watching')">▶️ Watching</button>
+        <button class="filter-btn status-filter-btn" data-val="Plan to Watch" onclick="setStatusFilter('Plan to Watch')">📌 Plan to Watch</button>
+        <button class="filter-btn status-filter-btn" data-val="Dropped"       onclick="setStatusFilter('Dropped')">❌ Dropped</button>
+      </div>
+      <div class="filter-btns" style="margin-top:8px">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;align-self:center">Country:</span>
+        <button class="filter-btn country-filter-btn" data-val="Korean"    onclick="setCountryFilter('Korean')">🇰🇷 Korean</button>
+        <button class="filter-btn country-filter-btn" data-val="Chinese"   onclick="setCountryFilter('Chinese')">🇨🇳 Chinese</button>
+        <button class="filter-btn country-filter-btn" data-val="Japanese"  onclick="setCountryFilter('Japanese')">🇯🇵 Japanese</button>
+        <button class="filter-btn country-filter-btn" data-val="Thai"      onclick="setCountryFilter('Thai')">🇹🇭 Thai</button>
+        <button class="filter-btn country-filter-btn" data-val="Taiwanese" onclick="setCountryFilter('Taiwanese')">🇹🇼 Taiwanese</button>
       </div>
     </div>
 

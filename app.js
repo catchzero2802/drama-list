@@ -25,6 +25,7 @@ const db          = getDatabase(firebaseApp);
 const dramasRef   = ref(db, "dramas");
 
 let dramas = {}, isAdmin = false, currentSort = "added";
+let filterStatus = "", filterCountry = "";
 let noteClicks = 0;
 
 // ── Firebase listener ────────────────────────────────────────
@@ -324,15 +325,37 @@ function setSort(s, btn) {
 }
 
 // ── Render ────────────────────────────────────────────────────
+function setStatusFilter(val) {
+  filterStatus = filterStatus === val ? "" : val;
+  // update button styles
+  document.querySelectorAll(".status-filter-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.val === filterStatus);
+  });
+  render();
+}
+
+function setCountryFilter(val) {
+  filterCountry = filterCountry === val ? "" : val;
+  document.querySelectorAll(".country-filter-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.val === filterCountry);
+  });
+  render();
+}
+
+function clearFilters() {
+  filterStatus = ""; filterCountry = "";
+  document.getElementById("searchInput").value = "";
+  document.querySelectorAll(".status-filter-btn, .country-filter-btn").forEach(b => b.classList.remove("active"));
+  render();
+}
+
 function render() {
-  const q       = (document.getElementById("searchInput")?.value || "").toLowerCase().trim();
-  const status  = document.getElementById("statusFilter")?.value || "";
-  const country = document.getElementById("countryFilter")?.value || "";
+  const q = (document.getElementById("searchInput")?.value || "").toLowerCase().trim();
   let list = Object.values(dramas);
 
-  if (q)       list = list.filter(d=>d.title.toLowerCase().includes(q)||(d.country||"").toLowerCase().includes(q)||(d.genres||[]).some(g=>g.toLowerCase().includes(q)));
-  if (status)  list = list.filter(d=>(d.status||"")=== status);
-  if (country) list = list.filter(d=>(d.country||"")=== country);
+  if (q)            list = list.filter(d => d.title.toLowerCase().includes(q) || (d.country||"").toLowerCase().includes(q) || (d.genres||[]).some(g => g.toLowerCase().includes(q)));
+  if (filterStatus) list = list.filter(d => (d.status||"") === filterStatus);
+  if (filterCountry)list = list.filter(d => (d.country||"") === filterCountry);
 
   switch(currentSort) {
     case "alpha":  list.sort((a,b)=>a.title.localeCompare(b.title)); break;
@@ -346,7 +369,8 @@ function render() {
   grid.innerHTML = "";
 
   if (!list.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="es-emoji">🎭</div><p>${q||status||country?"No dramas found":"No dramas yet"}</p><span>${q||status||country?"Try a different search or filter":"Add your first drama above!"}</span></div>`;
+    const hasFilter = q || filterStatus || filterCountry;
+    grid.innerHTML = `<div class="empty-state"><div class="es-emoji">🎭</div><p>${hasFilter ? "No dramas found" : "No dramas yet"}</p><span>${hasFilter ? "Try a different filter" : "Add your first drama above!"}</span>${hasFilter ? `<br><button onclick="clearFilters()" style="margin-top:14px;background:var(--accent);color:#fff;border:none;border-radius:50px;padding:9px 22px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer">Clear filters</button>` : ""}</div>`;
   } else {
     list.forEach((d,i)=>{
       const card = document.createElement("div");
@@ -469,6 +493,7 @@ window.openDetail=openDetail; window.closeDetail=closeDetail; window.saveDetail=
 window.saveField=saveField; window.setRating=setRating; window.changeRewatch=changeRewatch;
 window.playOST=playOST; window.closeOST=closeOST; window.randomPick=randomPick;
 window.closeRandom=closeRandom; window.toggleDark=toggleDark; window.revealNote=revealNote;
-window.closeNote=closeNote;
+window.closeNote=closeNote; window.setStatusFilter=setStatusFilter;
+window.setCountryFilter=setCountryFilter; window.clearFilters=clearFilters;
 
 spawnPetals();
