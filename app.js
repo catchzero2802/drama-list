@@ -495,5 +495,6 @@ window.playOST=playOST; window.closeOST=closeOST; window.randomPick=randomPick;
 window.closeRandom=closeRandom; window.toggleDark=toggleDark; window.revealNote=revealNote;
 window.closeNote=closeNote; window.setStatusFilter=setStatusFilter;
 window.setCountryFilter=setCountryFilter; window.clearFilters=clearFilters;
+window.render=render;
 
 spawnPetals();
