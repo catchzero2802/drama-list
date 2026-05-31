@@ -325,14 +325,14 @@ function setSort(s, btn) {
 
 // ── Render ────────────────────────────────────────────────────
 function render() {
-  const q       = document.getElementById("searchInput").value.toLowerCase();
-  const status  = document.getElementById("statusFilter").value;
-  const country = document.getElementById("countryFilter").value;
+  const q       = (document.getElementById("searchInput")?.value || "").toLowerCase().trim();
+  const status  = document.getElementById("statusFilter")?.value || "";
+  const country = document.getElementById("countryFilter")?.value || "";
   let list = Object.values(dramas);
 
   if (q)       list = list.filter(d=>d.title.toLowerCase().includes(q)||(d.country||"").toLowerCase().includes(q)||(d.genres||[]).some(g=>g.toLowerCase().includes(q)));
-  if (status)  list = list.filter(d=>d.status===status);
-  if (country) list = list.filter(d=>d.country===country);
+  if (status)  list = list.filter(d=>(d.status||"")=== status);
+  if (country) list = list.filter(d=>(d.country||"")=== country);
 
   switch(currentSort) {
     case "alpha":  list.sort((a,b)=>a.title.localeCompare(b.title)); break;
