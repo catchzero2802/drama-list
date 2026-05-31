@@ -382,7 +382,8 @@ function render() {
       const phStyle = d.poster?"display:none":"";
       const starsHTML = [1,2,3,4,5].map(i=>`<span class="star">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
       const statusLabel = d.status || "";
-      const statusClass = d.status ? `status-${d.status.replace(/\s+/g,"")}` : "";
+      const statusClassMap = {"Completed":"Completed","Watching":"Watching","Plan to Watch":"PlantoWatch","Dropped":"Dropped"};
+      const statusClass = d.status ? `status-${statusClassMap[d.status]||d.status.replace(/\s+/g,"")}` : "";
       const genreTags = (d.genres||[]).slice(0,2).map(g=>`<span class="genre-tag">${g}</span>`).join("");
       card.innerHTML = `
         ${posterHTML}

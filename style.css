@@ -104,10 +104,10 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--t
 .admin-mode .drama-card:hover .delete-btn { display: flex; }
 .status-badge { display: block; margin-top: 5px; }
 .status-tag { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 50px; font-weight: 500; white-space: nowrap; }
-.status-Completed    { background: rgba(76,175,100,0.15); color: #2d7a3a; border: 1px solid rgba(76,175,100,0.3); }
-.status-Watching     { background: rgba(201,98,74,0.15);  color: #b5503a; border: 1px solid rgba(201,98,74,0.3); }
-.status-Dropped      { background: rgba(150,120,100,0.15);color: #7a5a48; border: 1px solid rgba(150,120,100,0.3); }
-.status-PlanToWatch  { background: rgba(80,120,200,0.15); color: #3a5fa0; border: 1px solid rgba(80,120,200,0.3); }
+.status-Completed    { background: rgba(76,175,100,0.15); color: #2d7a3a;  border: 1px solid rgba(76,175,100,0.35); }
+.status-Watching     { background: rgba(66,133,244,0.15); color: #1a56b0;  border: 1px solid rgba(66,133,244,0.35); }
+.status-PlantoWatch  { background: rgba(230,150,40,0.15); color: #a06010;  border: 1px solid rgba(230,150,40,0.35); }
+.status-Dropped      { background: rgba(220,60,60,0.15);  color: #a02020;  border: 1px solid rgba(220,60,60,0.35); }
 .stars-row { display: flex; gap: 1px; margin-top: 3px; }
 .star { font-size: 11px; cursor: pointer; }
 .genre-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
