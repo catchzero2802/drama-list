@@ -317,10 +317,11 @@ async function deleteDrama(id, e) {
 }
 
 // ── Sort & filter ─────────────────────────────────────────────
-function setSort(s, btn) {
+function setSort(s) {
   currentSort = s;
-  document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+  document.querySelectorAll(".filter-btn[data-sort]").forEach(b => {
+    b.classList.toggle("active", b.dataset.sort === s);
+  });
   render();
 }
 
@@ -484,6 +485,14 @@ document.getElementById("modalBg").addEventListener("click",function(e){if(e.tar
 document.getElementById("detailBg").addEventListener("click",function(e){if(e.target===this)closeDetail()});
 document.getElementById("randomBg").addEventListener("click",function(e){if(e.target===this)closeRandom()});
 document.getElementById("noteBg").addEventListener("click",function(e){if(e.target===this)closeNote()});
+
+// search — wired directly so it always works inside a module
+document.getElementById("searchInput").addEventListener("input", render);
+
+// sort buttons
+document.querySelectorAll(".filter-btn[data-sort]").forEach(btn => {
+  btn.addEventListener("click", () => setSort(btn.dataset.sort, btn));
+});
 
 // ── Expose to HTML ────────────────────────────────────────────
 window.openPasswordModal=openPasswordModal; window.closePasswordModal=closePasswordModal;

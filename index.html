@@ -63,14 +63,14 @@
     <div class="controls">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input type="text" placeholder="Search by title, genre or country..." id="searchInput" oninput="render()" autocomplete="off">
+        <input type="text" placeholder="Search by title, genre or country..." id="searchInput" autocomplete="off">
       </div>
       <div class="filter-btns" id="filterBtns">
-        <button class="filter-btn active" onclick="setSort('added',this)">Recent</button>
-        <button class="filter-btn" onclick="setSort('alpha',this)">A–Z</button>
-        <button class="filter-btn" onclick="setSort('year',this)">Year</button>
-        <button class="filter-btn" onclick="setSort('fav',this)">★ Favs</button>
-        <button class="filter-btn" onclick="setSort('rating',this)">Top Rated</button>
+        <button class="filter-btn active" data-sort="added">Recent</button>
+        <button class="filter-btn" data-sort="alpha">A–Z</button>
+        <button class="filter-btn" data-sort="year">Year</button>
+        <button class="filter-btn" data-sort="fav">★ Favs</button>
+        <button class="filter-btn" data-sort="rating">Top Rated</button>
       </div>
       <div class="filter-btns" style="margin-top:8px">
         <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;align-self:center">Status:</span>
