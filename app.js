@@ -123,6 +123,9 @@ async function fetchTMDB(title) {
 async function addDrama() {
   const title = document.getElementById("titleInput").value.trim();
   if (!title) { showToast("✦ Please enter a drama title"); return; }
+  // case-insensitive duplicate check
+  const exists = Object.values(dramas).find(d => d.title.toLowerCase() === title.toLowerCase());
+  if (exists) { showToast("✦ Already in the list!"); return; }
   const btn = document.getElementById("addBtn");
   btn.disabled = true; btn.textContent = "Fetching info...";
   const tmdb = await fetchTMDB(title);
@@ -168,43 +171,64 @@ async function bulkAdd() {
 }
 
 // ── Detail modal ──────────────────────────────────────────────
+let currentDetailId = "";
+let currentTab = "info";
+
 function openDetail(id) {
-  const d = dramas[id];
+  currentDetailId = id;
+  currentTab = "info";
+  renderDetail();
+  document.getElementById("detailBg").classList.add("open");
+}
+
+function closeDetail() {
+  document.getElementById("detailBg").classList.remove("open");
+  currentDetailId = "";
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  renderDetail();
+}
+
+function renderDetail() {
+  const id = currentDetailId;
+  const d  = dramas[id];
   if (!d) return;
-  const genreHTML = (d.genres||[]).map(g=>`<span class="detail-genre">${g}</span>`).join("");
-  const posterHTML = d.poster
+
+  const genreHTML   = (d.genres||[]).map(g=>`<span class="detail-genre">${g}</span>`).join("");
+  const posterHTML  = d.poster
     ? `<img src="${d.poster}" style="width:100%;border-radius:10px" onerror="this.style.display='none'">`
     : `<div class="detail-poster-ph">${countryEmoji(d.country)}</div>`;
-  const ratingHTML = [1,2,3,4,5].map(i=>`<span class="detail-star" onclick="setRating('${id}',${i})" id="star_${id}_${i}">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
-  document.getElementById("detailContent").innerHTML = `
-    <div class="detail-top">
-      <div class="detail-poster">${posterHTML}</div>
-      <div class="detail-info">
-        <div class="detail-title">${escHtml(d.title)}</div>
-        <div class="detail-sub">${d.year}${d.country?" · "+d.country:""}</div>
-        <div class="detail-genres">${genreHTML}</div>
-        <div class="detail-label">Rating</div>
-        <div class="detail-stars">${ratingHTML}</div>
+  const ratingHTML  = [1,2,3,4,5].map(i=>`<span class="detail-star" onclick="setRating('${id}',${i})" id="star_${id}_${i}">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
+  const seasons     = d.seasons || {};
+  const seasonCount = Object.keys(seasons).length;
+
+  const infoActive    = currentTab==="info"    ? "active":"";
+  const seasonsActive = currentTab==="seasons" ? "active":"";
+
+  // build seasons HTML
+  let seasonsHTML = "";
+  if (currentTab === "seasons") {
+    const seasonList = Object.values(seasons).sort((a,b)=>a.num-b.num);
+    seasonsHTML = `
+      <div class="seasons-list" id="seasonsList">
+        ${seasonList.map(s => seasonRowHTML(id, s)).join("")}
       </div>
-    </div>
+      ${isAdmin ? `<button class="btn-add-season" onclick="addSeason('${id}')">+ Add Season</button>` : ""}`;
+  }
+
+  const infoHTML = currentTab === "info" ? `
     <div class="detail-row">
       <div class="detail-field">
-        <div class="detail-label">Status</div>
+        <div class="detail-label">Overall Status</div>
         <select class="detail-select" id="det_status" onchange="saveField('${id}','status',this.value)">
           <option value="" ${!d.status?"selected":""}>— Not set —</option>
-          <option value="Completed" ${d.status==="Completed"?"selected":""}>✅ Completed</option>
-          <option value="Watching"  ${d.status==="Watching" ?"selected":""}>▶️ Watching</option>
-          <option value="Plan to Watch" ${d.status==="Plan to Watch"?"selected":""}>📌 Plan to Watch</option>
-          <option value="Dropped"   ${d.status==="Dropped"  ?"selected":""}>❌ Dropped</option>
+          <option value="Completed"    ${d.status==="Completed"?"selected":""}>✅ Completed</option>
+          <option value="Watching"     ${d.status==="Watching"?"selected":""}>▶️ Watching</option>
+          <option value="Plan to Watch"${d.status==="Plan to Watch"?"selected":""}>📌 Plan to Watch</option>
+          <option value="Dropped"      ${d.status==="Dropped"?"selected":""}>❌ Dropped</option>
         </select>
-      </div>
-      <div class="detail-field">
-        <div class="detail-label">Episodes</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input class="detail-input" style="width:60px" type="number" id="det_ep" value="${d.episodes||""}" placeholder="0" min="0" onchange="saveField('${id}','episodes',this.value)">
-          <span style="color:var(--muted);font-size:13px">/</span>
-          <input class="detail-input" style="width:60px" type="number" id="det_tep" value="${d.totalEpisodes||""}" placeholder="?" min="0" onchange="saveField('${id}','totalEpisodes',this.value)">
-        </div>
       </div>
       <div class="detail-field">
         <div class="detail-label">Rewatches</div>
@@ -217,7 +241,7 @@ function openDetail(id) {
     </div>
     <div class="detail-field" style="margin-bottom:14px">
       <div class="detail-label">Personal notes</div>
-      <textarea class="detail-textarea" id="det_notes" placeholder="Your thoughts on this drama...">${escHtml(d.notes||"")}</textarea>
+      <textarea class="detail-textarea" id="det_notes" placeholder="Your thoughts...">${escHtml(d.notes||"")}</textarea>
     </div>
     <div class="detail-field detail-ost">
       <div class="detail-label">OST (YouTube link)</div>
@@ -226,11 +250,135 @@ function openDetail(id) {
         <button class="play-ost-btn" onclick="playOST('${id}')">▶ Play</button>
       </div>
     </div>
-    <button class="detail-save" onclick="saveDetail('${id}')">Save changes ✦</button>`;
-  document.getElementById("detailBg").classList.add("open");
+    <button class="detail-save" onclick="saveDetail('${id}')">Save changes ✦</button>` : "";
+
+  document.getElementById("detailContent").innerHTML = `
+    <div class="detail-top">
+      <div class="detail-poster">${posterHTML}</div>
+      <div class="detail-info">
+        <div class="detail-title">${escHtml(d.title)}</div>
+        <div class="detail-sub">${d.year}${d.country?" · "+d.country:""}${seasonCount?` · ${seasonCount} season${seasonCount>1?"s":""}`:""}</div>
+        <div class="detail-genres">${genreHTML}</div>
+        <div class="detail-label" style="margin-top:8px">Overall Rating</div>
+        <div class="detail-stars">${ratingHTML}</div>
+      </div>
+    </div>
+    <div class="detail-tabs">
+      <button class="detail-tab ${infoActive}"    onclick="switchTab('info')">Info</button>
+      <button class="detail-tab ${seasonsActive}" onclick="switchTab('seasons')">Seasons ${seasonCount?`<span class="season-count">${seasonCount}</span>`:""}</button>
+    </div>
+    ${infoHTML}
+    ${seasonsHTML}`;
 }
 
-function closeDetail() { document.getElementById("detailBg").classList.remove("open"); }
+function seasonRowHTML(dramaId, s) {
+  const statusClassMap = {"Completed":"Completed","Watching":"Watching","Plan to Watch":"PlantoWatch","Dropped":"Dropped"};
+  const sc = s.status ? `status-${statusClassMap[s.status]||""}` : "";
+  return `
+    <div class="season-row" id="srow_${s.id}">
+      <div class="season-poster">
+        ${s.poster ? `<img src="${s.poster}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ""}
+        <div style="${s.poster?"display:none":""}width:100%;height:100%;background:linear-gradient(135deg,var(--pink),var(--gold));display:flex;align-items:center;justify-content:center;font-size:16px;border-radius:6px">S${s.num}</div>
+      </div>
+      <div class="season-info">
+        <div class="season-title">Season ${s.num}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
+          ${s.status?`<span class="status-tag ${sc}" style="font-size:10px">${s.status}</span>`:""}
+          ${s.episodes?`<span style="font-size:11px;color:var(--muted)">Ep ${s.episodes}${s.totalEpisodes?"/"+s.totalEpisodes:""}</span>`:""}
+        </div>
+        <div style="display:flex;gap:2px;margin-top:3px">${[1,2,3,4,5].map(i=>`<span style="font-size:11px;color:var(--accent2)">${i<=(s.rating||0)?"★":"☆"}</span>`).join("")}</div>
+      </div>
+      ${isAdmin ? `<button class="season-edit-btn" onclick="openSeasonEdit('${dramaId}','${s.id}')">✎</button>` : ""}
+    </div>`;
+}
+
+async function addSeason(dramaId) {
+  const d = dramas[dramaId];
+  if (!d) return;
+  const seasons  = d.seasons || {};
+  const nextNum  = Object.keys(seasons).length + 1;
+  const sId      = "s_" + Date.now();
+
+  // fetch season-specific poster from TMDB
+  let poster = d.poster || "";
+  if (TMDB_API_KEY && TMDB_API_KEY !== "PASTE_YOUR_TMDB_KEY_HERE") {
+    try {
+      const res  = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(d.title)}&language=en-US`);
+      const data = await res.json();
+      const show = data.results?.[0];
+      if (show) {
+        const sRes  = await fetch(`https://api.themoviedb.org/3/tv/${show.id}/season/${nextNum}?api_key=${TMDB_API_KEY}&language=en-US`);
+        const sData = await sRes.json();
+        if (sData.poster_path) poster = `https://image.tmdb.org/t/p/w300${sData.poster_path}`;
+      }
+    } catch(e) { /* use default poster */ }
+  }
+
+  const season = { id: sId, num: nextNum, poster, status: "", episodes: "", totalEpisodes: "", rating: 0 };
+  await set(ref(db, `dramas/${dramaId}/seasons/${sId}`), season);
+  showToast(`✓ Season ${nextNum} added!`);
+}
+
+let currentSeasonId   = "";
+let currentSeasonDrama = "";
+
+function openSeasonEdit(dramaId, sId) {
+  currentSeasonDrama = dramaId;
+  currentSeasonId    = sId;
+  const s = dramas[dramaId]?.seasons?.[sId];
+  if (!s) return;
+  document.getElementById("sNum").textContent    = `Season ${s.num}`;
+  document.getElementById("sStatus").value       = s.status || "";
+  document.getElementById("sEp").value           = s.episodes || "";
+  document.getElementById("sTep").value          = s.totalEpisodes || "";
+  document.getElementById("sRatingVal").textContent = s.rating || 0;
+  renderSeasonStars(s.rating || 0);
+  document.getElementById("seasonEditBg").classList.add("open");
+}
+
+function closeSeasonEdit() {
+  document.getElementById("seasonEditBg").classList.remove("open");
+}
+
+function renderSeasonStars(val) {
+  document.querySelectorAll(".s-star").forEach((el,i)=>{
+    el.textContent = i < val ? "★" : "☆";
+  });
+}
+
+function setSeasonRating(val) {
+  const current = parseInt(document.getElementById("sRatingVal").textContent) || 0;
+  const newVal  = current === val ? 0 : val;
+  document.getElementById("sRatingVal").textContent = newVal;
+  renderSeasonStars(newVal);
+}
+
+async function saveSeasonEdit() {
+  const status       = document.getElementById("sStatus").value;
+  const episodes     = document.getElementById("sEp").value;
+  const totalEpisodes= document.getElementById("sTep").value;
+  const rating       = parseInt(document.getElementById("sRatingVal").textContent) || 0;
+  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/status`), status);
+  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/episodes`), episodes);
+  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/totalEpisodes`), totalEpisodes);
+  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/rating`), rating);
+  closeSeasonEdit();
+  showToast("✓ Season saved!");
+  renderDetail();
+}
+
+async function deleteSeasonEdit() {
+  if (!confirm("Remove this season?")) return;
+  await remove(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}`));
+  closeSeasonEdit();
+  showToast("Season removed");
+  renderDetail();
+}
+
+function closeDetail() {
+  document.getElementById("detailBg").classList.remove("open");
+  currentDetailId = "";
+}
 
 async function saveField(id, field, value) {
   await set(ref(db, `dramas/${id}/${field}`), value);
@@ -570,6 +718,7 @@ document.getElementById("modalBg").addEventListener("click",function(e){if(e.tar
 document.getElementById("detailBg").addEventListener("click",function(e){if(e.target===this)closeDetail()});
 document.getElementById("randomBg").addEventListener("click",function(e){if(e.target===this)closeRandom()});
 document.getElementById("noteBg").addEventListener("click",function(e){if(e.target===this)closeNote()});
+document.getElementById("seasonEditBg").addEventListener("click",function(e){if(e.target===this)closeSeasonEdit()});
 
 // search — wired directly so it always works inside a module
 document.getElementById("searchInput").addEventListener("input", render);
@@ -593,6 +742,9 @@ window.closeNote=closeNote; window.setStatusFilter=setStatusFilter;
 window.setCountryFilter=setCountryFilter; window.clearFilters=clearFilters;
 window.render=render; window.openActorModal=openActorModal;
 window.closeActorModal=closeActorModal; window.saveActor=saveActor;
-window.updateActorPreview=updateActorPreview;
+window.updateActorPreview=updateActorPreview; window.switchTab=switchTab;
+window.addSeason=addSeason; window.openSeasonEdit=openSeasonEdit;
+window.closeSeasonEdit=closeSeasonEdit; window.setSeasonRating=setSeasonRating;
+window.saveSeasonEdit=saveSeasonEdit; window.deleteSeasonEdit=deleteSeasonEdit;
 
 spawnPetals();

@@ -132,6 +132,45 @@
     </div>
   </div>
 
+  <!-- SEASON EDIT MODAL -->
+  <div class="modal-bg" id="seasonEditBg">
+    <div class="modal season-edit-modal">
+      <button class="close-btn" onclick="closeSeasonEdit()">✕</button>
+      <h3 id="sNum">Season</h3>
+      <div class="detail-field">
+        <div class="detail-label">Status</div>
+        <select class="detail-select" id="sStatus">
+          <option value="">— Not set —</option>
+          <option value="Completed">✅ Completed</option>
+          <option value="Watching">▶️ Watching</option>
+          <option value="Plan to Watch">📌 Plan to Watch</option>
+          <option value="Dropped">❌ Dropped</option>
+        </select>
+      </div>
+      <div class="detail-field">
+        <div class="detail-label">Episodes watched / total</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="detail-input" style="width:65px" type="number" id="sEp" placeholder="0" min="0">
+          <span style="color:var(--muted)">/</span>
+          <input class="detail-input" style="width:65px" type="number" id="sTep" placeholder="?" min="0">
+        </div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-label">Rating</div>
+        <div class="s-stars">
+          <span class="s-star" onclick="setSeasonRating(1)">☆</span>
+          <span class="s-star" onclick="setSeasonRating(2)">☆</span>
+          <span class="s-star" onclick="setSeasonRating(3)">☆</span>
+          <span class="s-star" onclick="setSeasonRating(4)">☆</span>
+          <span class="s-star" onclick="setSeasonRating(5)">☆</span>
+        </div>
+        <input type="hidden" id="sRatingVal" value="0">
+      </div>
+      <button class="detail-save" onclick="saveSeasonEdit()">Save Season ✦</button>
+      <button class="btn-delete-season" onclick="deleteSeasonEdit()">Remove this season</button>
+    </div>
+  </div>
+
   <!-- ACTOR EDIT MODAL -->
   <div class="modal-bg" id="actorBg">
     <div class="modal actor-modal">
