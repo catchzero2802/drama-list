@@ -258,3 +258,28 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--t
   .modal { width: 92vw; padding: 24px 20px; }
   .detail-row { flex-direction: column; }
 }
+
+/* GUINEA PIG */
+.guinea-pig {
+  position: fixed;
+  bottom: 10px;
+  left: -80px;
+  z-index: 998;
+  cursor: pointer;
+  width: 56px;
+  height: 38px;
+}
+.guinea-pig:hover { transform: scale(1.15); }
+@keyframes gp-walk {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+@keyframes gp-run-right {
+  from { left: -80px; }
+  to   { left: calc(100vw + 80px); }
+}
+@keyframes gp-run-left {
+  from { left: calc(100vw + 80px); }
+  to   { left: -80px; }
+}
+.gp-body { animation: gp-walk 0.3s ease-in-out infinite; }

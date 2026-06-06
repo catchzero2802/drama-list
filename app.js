@@ -210,6 +210,11 @@ function closeDetail() {
   currentDetailId = "";
 }
 
+function closeDetail() {
+  document.getElementById("detailBg").classList.remove("open");
+  currentDetailId = "";
+}
+
 function switchTab(tab) {
   currentTab = tab;
   renderDetail();
@@ -300,7 +305,7 @@ function seasonRowHTML(dramaId, s) {
   const sc = s.status ? `status-${statusClassMap[s.status]||""}` : "";
   return `
     <div class="season-row" id="srow_${s.id}">
-      <div class="season-poster">
+      <div class="season-poster" onclick="openPosterLightbox('${s.poster||""}')" style="cursor:${s.poster?'pointer':'default'}">
         ${s.poster ? `<img src="${s.poster}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ""}
         <div style="${s.poster?"display:none":""}width:100%;height:100%;background:linear-gradient(135deg,var(--pink),var(--gold));display:flex;align-items:center;justify-content:center;font-size:16px;border-radius:6px">S${s.num}</div>
       </div>
@@ -732,6 +737,117 @@ async function saveActor() {
   showToast("✓ Saved!");
 }
 
+// ── Guinea Pig ────────────────────────────────────────────────
+(function() {
+  const gp       = document.getElementById("guineaPig");
+  const svg      = gp.querySelector("svg");
+  let direction  = 1;   // 1 = right, -1 = left
+  let running    = false;
+  let sniffTimer = null;
+
+  function runAcross() {
+    if (running) return;
+    running = true;
+
+    // flip direction each run
+    if (direction === 1) {
+      // running right — face right (default)
+      svg.style.transform = "scaleX(1)";
+      gp.style.left = "-80px";
+      gp.style.transition = "none";
+
+      // run to right edge
+      const duration = 6000 + Math.random() * 4000;
+      setTimeout(() => {
+        gp.style.transition = `left ${duration}ms linear`;
+        gp.style.left = "calc(100vw + 80px)";
+      }, 50);
+
+      // mid-way stop to sniff
+      sniffTimer = setTimeout(() => {
+        const stopX = (20 + Math.random() * 60) + "vw";
+        gp.style.transition = "left 0.4s ease-out";
+        gp.style.left = stopX;
+        setTimeout(() => {
+          // sniff animation — bob up down
+          gp.style.bottom = "18px";
+          setTimeout(() => { gp.style.bottom = "10px";
+          setTimeout(() => { gp.style.bottom = "16px";
+          setTimeout(() => { gp.style.bottom = "10px";
+          setTimeout(() => {
+            // continue running
+            gp.style.transition = `left ${duration * 0.5}ms linear`;
+            gp.style.left = "calc(100vw + 80px)";
+          }, 300); }, 200); }, 200); }, 200);
+        }, 400);
+      }, duration * 0.35);
+
+      setTimeout(() => {
+        direction = -1;
+        running = false;
+      }, duration + 800);
+
+    } else {
+      // running left — flip horizontally
+      svg.style.transform = "scaleX(-1)";
+      gp.style.left = "calc(100vw + 80px)";
+      gp.style.transition = "none";
+
+      const duration = 6000 + Math.random() * 4000;
+      setTimeout(() => {
+        gp.style.transition = `left ${duration}ms linear`;
+        gp.style.left = "-80px";
+      }, 50);
+
+      sniffTimer = setTimeout(() => {
+        const stopX = (20 + Math.random() * 60) + "vw";
+        gp.style.transition = "left 0.4s ease-out";
+        gp.style.left = stopX;
+        setTimeout(() => {
+          gp.style.bottom = "18px";
+          setTimeout(() => { gp.style.bottom = "10px";
+          setTimeout(() => { gp.style.bottom = "16px";
+          setTimeout(() => { gp.style.bottom = "10px";
+          setTimeout(() => {
+            gp.style.transition = `left ${duration * 0.5}ms linear`;
+            gp.style.left = "-80px";
+          }, 300); }, 200); }, 200); }, 200);
+        }, 400);
+      }, duration * 0.35);
+
+      setTimeout(() => {
+        direction = 1;
+        running = false;
+      }, duration + 800);
+    }
+  }
+
+  function gpSqueak() {
+    showToast("🐾 wheek wheek!");
+    // run immediately when clicked
+    if (!running) runAcross();
+  }
+  window.gpSqueak = gpSqueak;
+
+  // first run after 4 seconds, then every 25-45 seconds
+  setTimeout(() => {
+    runAcross();
+    setInterval(() => {
+      if (!running) runAcross();
+    }, 25000 + Math.random() * 20000);
+  }, 4000);
+})();
+
+// ── Poster Lightbox ───────────────────────────────────────────
+function openPosterLightbox(url) {
+  if (!url) return;
+  document.getElementById("lightboxImg").src = url;
+  document.getElementById("lightboxBg").classList.add("open");
+}
+function closeLightbox() {
+  document.getElementById("lightboxBg").classList.remove("open");
+}
+
 // ── Event listeners ───────────────────────────────────────────
 document.getElementById("modalBg").addEventListener("click",function(e){if(e.target===this)closePasswordModal()});
 document.getElementById("detailBg").addEventListener("click",function(e){if(e.target===this)closeDetail()});
@@ -750,6 +866,8 @@ document.querySelectorAll(".filter-btn[data-sort]").forEach(btn => {
 document.getElementById("actorBg").addEventListener("click",function(e){if(e.target===this)closeActorModal()});
 
 // ── Expose to HTML ────────────────────────────────────────────
+document.getElementById("lightboxBg").addEventListener("click", closeLightbox);
+
 window.openPasswordModal=openPasswordModal; window.closePasswordModal=closePasswordModal;
 window.checkPassword=checkPassword; window.addDrama=addDrama; window.bulkAdd=bulkAdd;
 window.toggleFav=toggleFav; window.deleteDrama=deleteDrama; window.setSort=setSort;
@@ -765,5 +883,6 @@ window.updateActorPreview=updateActorPreview; window.switchTab=switchTab;
 window.addSeason=addSeason; window.openSeasonEdit=openSeasonEdit;
 window.closeSeasonEdit=closeSeasonEdit; window.setSeasonRating=setSeasonRating;
 window.saveSeasonEdit=saveSeasonEdit; window.deleteSeasonEdit=deleteSeasonEdit;
+window.openPosterLightbox=openPosterLightbox; window.closeLightbox=closeLightbox;
 
 spawnPetals();
