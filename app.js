@@ -205,11 +205,6 @@ function openDetail(id) {
   document.getElementById("detailBg").classList.add("open");
 }
 
-function closeDetail() {
-  document.getElementById("detailBg").classList.remove("open");
-  currentDetailId = "";
-}
-
 function switchTab(tab) {
   currentTab = tab;
   renderDetail();
@@ -397,11 +392,6 @@ async function deleteSeasonEdit() {
   closeSeasonEdit();
   showToast("Season removed");
   renderDetail();
-}
-
-function closeDetail() {
-  document.getElementById("detailBg").classList.remove("open");
-  currentDetailId = "";
 }
 
 async function saveField(id, field, value) {
