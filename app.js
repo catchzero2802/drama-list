@@ -1,8 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
-   JOLENE'S DRAMA LIST — app.js
+   JOLENE'S DRAMA LIST — app.js (complete final version)
    ═══════════════════════════════════════════════════════════ */
 
-// ── CONFIG — FILL THESE IN ───────────────────────────────────
 const TMDB_API_KEY   = "ba8ddf8e7b60437308efe36024b1c3d6";
 const ADMIN_PASSWORD = "210326";
 
@@ -15,7 +14,6 @@ const firebaseConfig = {
   messagingSenderId: "198560796882",
   appId: "1:198560796882:web:77b4190e79803320c3dd0b"
 };
-// ────────────────────────────────────────────────────────────
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -28,7 +26,6 @@ let dramas = {}, isAdmin = false, currentSort = "added";
 let filterStatus = "", filterCountry = "";
 let noteClicks = 0;
 
-// ── Firebase listener ────────────────────────────────────────
 onValue(dramasRef, (snapshot) => {
   const prev = Object.keys(dramas).length;
   dramas = snapshot.val() || {};
@@ -89,7 +86,7 @@ function setAdmin(v) {
   render();
 }
 
-// ── Country / genre helpers ───────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────
 function mapCountry(codes) {
   if (!codes || !codes.length) return "Other";
   const m = { KR:"Korean", CN:"Chinese", JP:"Japanese", TH:"Thai", TW:"Taiwanese", HK:"Chinese" };
@@ -99,533 +96,6 @@ function mapGenres(ids) {
   const m = {10759:"Action",16:"Animation",35:"Comedy",80:"Crime",99:"Documentary",18:"Drama",10751:"Family",10762:"Kids",9648:"Mystery",10763:"News",10764:"Reality",10765:"Sci-Fi",10766:"Soap",10767:"Talk",10768:"War",37:"Western",10749:"Romance",27:"Horror",53:"Thriller",14:"Fantasy",36:"History",10402:"Music"};
   return (ids||[]).slice(0,3).map(id=>m[id]).filter(Boolean);
 }
-
-// ── TMDB fetch ────────────────────────────────────────────────
-async function fetchTMDB(title) {
-  if (!TMDB_API_KEY || TMDB_API_KEY === "PASTE_YOUR_TMDB_KEY_HERE")
-    return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[], seasons:{}, tmdbId:null };
-  try {
-    const res  = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&language=en-US`);
-    const data = await res.json();
-    const results = (data.results||[]).filter(r=>r.poster_path);
-    if (!results.length) return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[], seasons:{}, tmdbId:null };
-    const best    = results.find(r=>r.media_type==="tv") || results[0];
-    const poster  = `https://image.tmdb.org/t/p/w300${best.poster_path}`;
-    const dateStr = best.first_air_date || best.release_date || "";
-    const year    = dateStr ? parseInt(dateStr.slice(0,4)) : new Date().getFullYear();
-    const country = mapCountry(best.origin_country);
-    const genres  = mapGenres(best.genre_ids);
-    const tmdbId  = best.id;
-
-    // fetch full show details to get seasons
-    let seasons = {};
-    if (best.media_type === "tv" && tmdbId) {
-      try {
-        const showRes  = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`);
-        const showData = await showRes.json();
-        const realSeasons = (showData.seasons||[]).filter(s => s.season_number > 0);
-        if (realSeasons.length > 1) {
-          // only auto-create seasons if there are multiple
-          realSeasons.forEach(s => {
-            const sId = "s_" + s.season_number;
-            seasons[sId] = {
-              id: sId,
-              num: s.season_number,
-              poster: s.poster_path ? `https://image.tmdb.org/t/p/w300${s.poster_path}` : poster,
-              status: "", episodes: "", totalEpisodes: s.episode_count || "", rating: 0
-            };
-          });
-        }
-      } catch(e) { /* skip seasons if fetch fails */ }
-    }
-
-    return { poster, year, country, genres, seasons, tmdbId };
-  } catch(e) { return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[], seasons:{}, tmdbId:null }; }
-}
-
-// ── Add single drama ──────────────────────────────────────────
-async function addDrama() {
-  const title = document.getElementById("titleInput").value.trim();
-  if (!title) { showToast("✦ Please enter a drama title"); return; }
-  // case-insensitive duplicate check
-  const exists = Object.values(dramas).find(d => d.title.toLowerCase() === title.toLowerCase());
-  if (exists) { showToast("✦ Already in the list!"); return; }
-  const btn = document.getElementById("addBtn");
-  btn.disabled = true; btn.textContent = "Fetching info...";
-  const tmdb = await fetchTMDB(title);
-  const manualYear    = parseInt(document.getElementById("yearInput").value);
-  const manualCountry = document.getElementById("countryInput").value;
-  const id = "d_" + Date.now();
-  const drama = { id, title, year: manualYear||tmdb.year, country: manualCountry||tmdb.country, genres: tmdb.genres, fav:false, addedAt:Date.now(), poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"", seasons: tmdb.seasons||{} };
-  await set(ref(db, `dramas/${id}`), drama);
-  document.getElementById("titleInput").value = "";
-  document.getElementById("yearInput").value = "";
-  document.getElementById("countryInput").value = "";
-  showToast("✓ Added: " + title + (tmdb.poster?" 🖼":""));
-  btn.disabled = false; btn.textContent = "+ Add";
-}
-
-// ── Bulk add ──────────────────────────────────────────────────
-async function bulkAdd() {
-  const raw = document.getElementById("bulkInput").value.trim();
-  if (!raw) { showToast("✦ Paste some drama titles first"); return; }
-  const lines = [...new Set(raw.split("\n").map(l=>l.trim()).filter(l=>l.length>0))];
-  const existingTitles = Object.values(dramas).map(d=>d.title.toLowerCase());
-  const toAdd = lines.filter(l=>!existingTitles.includes(l.toLowerCase()));
-  const skipped = lines.length - toAdd.length;
-  if (!toAdd.length) { showToast("All dramas already in the list!"); return; }
-  const btn = document.getElementById("bulkBtn");
-  const progress = document.getElementById("bulkProgress");
-  btn.disabled = true;
-  progress.innerHTML = `<div>Adding <strong>${toAdd.length}</strong> dramas${skipped?` (${skipped} skipped)`:""}... 🌸</div><div class="prog-bar-wrap"><div class="prog-bar" id="progBar" style="width:0%"></div></div>`;
-  let done = 0;
-  for (const title of toAdd) {
-    const tmdb = await fetchTMDB(title);
-    const id = "d_" + Date.now() + "_" + Math.random().toString(36).slice(2,6);
-    await set(ref(db, `dramas/${id}`), { id, title, year:tmdb.year, country:tmdb.country, genres:tmdb.genres, fav:false, addedAt:Date.now()-(toAdd.length-done)*10, poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"", seasons:tmdb.seasons||{} });
-    done++;
-    document.getElementById("progBar").style.width = Math.round(done/toAdd.length*100)+"%";
-    progress.querySelector("div").textContent = `Added ${done} of ${toAdd.length}${skipped?` (${skipped} skipped)`:""}... 🌸`;
-    await new Promise(r=>setTimeout(r,300));
-  }
-  progress.innerHTML = `✓ Done! Added <strong>${done}</strong> dramas${skipped?`, skipped ${skipped} duplicates`:""} 🎉`;
-  document.getElementById("bulkInput").value = "";
-  btn.disabled = false;
-  showToast(`✓ Imported ${done} dramas!`);
-}
-
-// ── Detail modal ──────────────────────────────────────────────
-let currentDetailId = "";
-let currentTab = "info";
-
-function openDetail(id) {
-  currentDetailId = id;
-  currentTab = "info";
-  renderDetail();
-  document.getElementById("detailBg").classList.add("open");
-}
-
-function closeDetail() {
-  document.getElementById("detailBg").classList.remove("open");
-  currentDetailId = "";
-}
-
-function closeDetail() {
-  document.getElementById("detailBg").classList.remove("open");
-  currentDetailId = "";
-}
-
-function switchTab(tab) {
-  currentTab = tab;
-  renderDetail();
-}
-
-function renderDetail() {
-  const id = currentDetailId;
-  const d  = dramas[id];
-  if (!d) return;
-
-  const genreHTML   = (d.genres||[]).map(g=>`<span class="detail-genre">${g}</span>`).join("");
-  const posterHTML  = d.poster
-    ? `<img src="${d.poster}" style="width:100%;border-radius:10px" onerror="this.style.display='none'">`
-    : `<div class="detail-poster-ph">${countryEmoji(d.country)}</div>`;
-  const ratingHTML  = [1,2,3,4,5].map(i=>`<span class="detail-star" onclick="setRating('${id}',${i})" id="star_${id}_${i}">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
-  const seasons     = d.seasons || {};
-  const seasonCount = Object.keys(seasons).length;
-
-  const infoActive    = currentTab==="info"    ? "active":"";
-  const seasonsActive = currentTab==="seasons" ? "active":"";
-
-  // build seasons HTML
-  let seasonsHTML = "";
-  if (currentTab === "seasons") {
-    const seasonList = Object.values(seasons).sort((a,b)=>a.num-b.num);
-    seasonsHTML = `
-      <div class="seasons-list" id="seasonsList">
-        ${seasonList.map(s => seasonRowHTML(id, s)).join("")}
-      </div>
-      ${isAdmin ? `<button class="btn-add-season" onclick="addSeason('${id}')">+ Add Season</button>` : ""}`;
-  }
-
-  const infoHTML = currentTab === "info" ? `
-    <div class="detail-row">
-      <div class="detail-field">
-        <div class="detail-label">Overall Status</div>
-        <select class="detail-select" id="det_status" onchange="saveField('${id}','status',this.value)">
-          <option value="" ${!d.status?"selected":""}>— Not set —</option>
-          <option value="Completed"    ${d.status==="Completed"?"selected":""}>✅ Completed</option>
-          <option value="Watching"     ${d.status==="Watching"?"selected":""}>▶️ Watching</option>
-          <option value="Plan to Watch"${d.status==="Plan to Watch"?"selected":""}>📌 Plan to Watch</option>
-          <option value="Dropped"      ${d.status==="Dropped"?"selected":""}>❌ Dropped</option>
-        </select>
-      </div>
-      <div class="detail-field">
-        <div class="detail-label">Rewatches</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button onclick="changeRewatch('${id}',-1)" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:var(--text)">−</button>
-          <span id="rewatch_${id}" style="font-size:16px;font-weight:500;min-width:20px;text-align:center">${d.rewatches||0}</span>
-          <button onclick="changeRewatch('${id}',1)" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:var(--text)">+</button>
-        </div>
-      </div>
-    </div>
-    <div class="detail-field" style="margin-bottom:14px">
-      <div class="detail-label">Personal notes</div>
-      <textarea class="detail-textarea" id="det_notes" placeholder="Your thoughts...">${escHtml(d.notes||"")}</textarea>
-    </div>
-    <div class="detail-field detail-ost">
-      <div class="detail-label">OST (YouTube link)</div>
-      <div class="ost-input-row">
-        <input class="detail-input" id="det_ost" type="url" placeholder="Paste YouTube URL..." value="${escHtml(d.ost||"")}">
-        <button class="play-ost-btn" onclick="playOST('${id}')">▶ Play</button>
-      </div>
-    </div>
-    <button class="detail-save" onclick="saveDetail('${id}')">Save changes ✦</button>` : "";
-
-  document.getElementById("detailContent").innerHTML = `
-    <div class="detail-top">
-      <div class="detail-poster">${posterHTML}</div>
-      <div class="detail-info">
-        <div class="detail-title">${escHtml(d.title)}</div>
-        <div class="detail-sub">${d.year}${d.country?" · "+d.country:""}${seasonCount?` · ${seasonCount} season${seasonCount>1?"s":""}`:""}</div>
-        <div class="detail-genres">${genreHTML}</div>
-        <div class="detail-label" style="margin-top:8px">Overall Rating</div>
-        <div class="detail-stars">${ratingHTML}</div>
-      </div>
-    </div>
-    <div class="detail-tabs">
-      <button class="detail-tab ${infoActive}"    onclick="switchTab('info')">Info</button>
-      <button class="detail-tab ${seasonsActive}" onclick="switchTab('seasons')">Seasons ${seasonCount?`<span class="season-count">${seasonCount}</span>`:""}</button>
-    </div>
-    ${infoHTML}
-    ${seasonsHTML}`;
-}
-
-function seasonRowHTML(dramaId, s) {
-  const statusClassMap = {"Completed":"Completed","Watching":"Watching","Plan to Watch":"PlantoWatch","Dropped":"Dropped"};
-  const sc = s.status ? `status-${statusClassMap[s.status]||""}` : "";
-  return `
-    <div class="season-row" id="srow_${s.id}">
-      <div class="season-poster" onclick="openPosterLightbox('${s.poster||""}')" style="cursor:${s.poster?'pointer':'default'}">
-        ${s.poster ? `<img src="${s.poster}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ""}
-        <div style="${s.poster?"display:none":""}width:100%;height:100%;background:linear-gradient(135deg,var(--pink),var(--gold));display:flex;align-items:center;justify-content:center;font-size:16px;border-radius:6px">S${s.num}</div>
-      </div>
-      <div class="season-info">
-        <div class="season-title">Season ${s.num}</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
-          ${s.status?`<span class="status-tag ${sc}" style="font-size:10px">${s.status}</span>`:""}
-          ${s.episodes?`<span style="font-size:11px;color:var(--muted)">Ep ${s.episodes}${s.totalEpisodes?"/"+s.totalEpisodes:""}</span>`:""}
-        </div>
-        <div style="display:flex;gap:2px;margin-top:3px">${[1,2,3,4,5].map(i=>`<span style="font-size:11px;color:var(--accent2)">${i<=(s.rating||0)?"★":"☆"}</span>`).join("")}</div>
-      </div>
-      ${isAdmin ? `<button class="season-edit-btn" onclick="openSeasonEdit('${dramaId}','${s.id}')">✎</button>` : ""}
-    </div>`;
-}
-
-async function addSeason(dramaId) {
-  const d = dramas[dramaId];
-  if (!d) return;
-  const seasons  = d.seasons || {};
-  const nextNum  = Object.keys(seasons).length + 1;
-  const sId      = "s_" + Date.now();
-
-  // fetch season-specific poster from TMDB
-  let poster = d.poster || "";
-  if (TMDB_API_KEY && TMDB_API_KEY !== "PASTE_YOUR_TMDB_KEY_HERE") {
-    try {
-      const res  = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(d.title)}&language=en-US`);
-      const data = await res.json();
-      const show = data.results?.[0];
-      if (show) {
-        const sRes  = await fetch(`https://api.themoviedb.org/3/tv/${show.id}/season/${nextNum}?api_key=${TMDB_API_KEY}&language=en-US`);
-        const sData = await sRes.json();
-        if (sData.poster_path) poster = `https://image.tmdb.org/t/p/w300${sData.poster_path}`;
-      }
-    } catch(e) { /* use default poster */ }
-  }
-
-  const season = { id: sId, num: nextNum, poster, status: "", episodes: "", totalEpisodes: "", rating: 0 };
-  await set(ref(db, `dramas/${dramaId}/seasons/${sId}`), season);
-  showToast(`✓ Season ${nextNum} added!`);
-}
-
-let currentSeasonId   = "";
-let currentSeasonDrama = "";
-
-function openSeasonEdit(dramaId, sId) {
-  currentSeasonDrama = dramaId;
-  currentSeasonId    = sId;
-  const s = dramas[dramaId]?.seasons?.[sId];
-  if (!s) return;
-  document.getElementById("sNum").textContent    = `Season ${s.num}`;
-  document.getElementById("sStatus").value       = s.status || "";
-  document.getElementById("sEp").value           = s.episodes || "";
-  document.getElementById("sTep").value          = s.totalEpisodes || "";
-  document.getElementById("sRatingVal").textContent = s.rating || 0;
-  renderSeasonStars(s.rating || 0);
-  document.getElementById("seasonEditBg").classList.add("open");
-}
-
-function closeSeasonEdit() {
-  document.getElementById("seasonEditBg").classList.remove("open");
-}
-
-function renderSeasonStars(val) {
-  document.querySelectorAll(".s-star").forEach((el,i)=>{
-    el.textContent = i < val ? "★" : "☆";
-  });
-}
-
-function setSeasonRating(val) {
-  const current = parseInt(document.getElementById("sRatingVal").textContent) || 0;
-  const newVal  = current === val ? 0 : val;
-  document.getElementById("sRatingVal").textContent = newVal;
-  renderSeasonStars(newVal);
-}
-
-async function saveSeasonEdit() {
-  const status       = document.getElementById("sStatus").value;
-  const episodes     = document.getElementById("sEp").value;
-  const totalEpisodes= document.getElementById("sTep").value;
-  const rating       = parseInt(document.getElementById("sRatingVal").textContent) || 0;
-  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/status`), status);
-  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/episodes`), episodes);
-  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/totalEpisodes`), totalEpisodes);
-  await set(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/rating`), rating);
-  closeSeasonEdit();
-  showToast("✓ Season saved!");
-  renderDetail();
-}
-
-async function deleteSeasonEdit() {
-  if (!confirm("Remove this season?")) return;
-  await remove(ref(db, `dramas/${currentSeasonDrama}/seasons/${currentSeasonId}`));
-  closeSeasonEdit();
-  showToast("Season removed");
-  renderDetail();
-}
-
-async function saveField(id, field, value) {
-  await set(ref(db, `dramas/${id}/${field}`), value);
-}
-
-async function setRating(id, val) {
-  const current = dramas[id]?.rating || 0;
-  const newRating = current === val ? 0 : val;
-  await set(ref(db, `dramas/${id}/rating`), newRating);
-  for (let i = 1; i <= 5; i++) {
-    const el = document.getElementById(`star_${id}_${i}`);
-    if (el) el.textContent = i <= newRating ? "★" : "☆";
-  }
-}
-
-async function changeRewatch(id, delta) {
-  const current = dramas[id]?.rewatches || 0;
-  const newVal = Math.max(0, current + delta);
-  await set(ref(db, `dramas/${id}/rewatches`), newVal);
-  const el = document.getElementById(`rewatch_${id}`);
-  if (el) el.textContent = newVal;
-}
-
-async function saveDetail(id) {
-  const notes = document.getElementById("det_notes")?.value || "";
-  const ost   = document.getElementById("det_ost")?.value || "";
-  const ep    = document.getElementById("det_ep")?.value || "";
-  const tep   = document.getElementById("det_tep")?.value || "";
-  await set(ref(db, `dramas/${id}/notes`), notes);
-  await set(ref(db, `dramas/${id}/ost`), ost);
-  await set(ref(db, `dramas/${id}/episodes`), ep);
-  await set(ref(db, `dramas/${id}/totalEpisodes`), tep);
-  showToast("✓ Saved!");
-  closeDetail();
-}
-
-// ── OST Player ────────────────────────────────────────────────
-function playOST(id) {
-  const ost = document.getElementById("det_ost")?.value || dramas[id]?.ost || "";
-  if (!ost) { showToast("✦ Paste a YouTube URL first"); return; }
-  const ytId = extractYTId(ost);
-  if (!ytId) { showToast("✦ Couldn't read that YouTube URL"); return; }
-  const player = document.getElementById("ostPlayer");
-  document.getElementById("ostTitle").textContent = "🎵 " + (dramas[id]?.title || "OST");
-  document.getElementById("ostFrame").innerHTML = `<iframe width="100%" height="200" src="https://www.youtube.com/embed/${ytId}?autoplay=1" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen></iframe>`;
-  player.style.display = "block";
-  closeDetail();
-}
-function closeOST() {
-  document.getElementById("ostPlayer").style.display = "none";
-  document.getElementById("ostFrame").innerHTML = "";
-}
-function extractYTId(url) {
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
-
-// ── Random pick ───────────────────────────────────────────────
-function randomPick() {
-  const planList = Object.values(dramas).filter(d=>d.status==="Plan to Watch");
-  const pool = planList.length ? planList : Object.values(dramas);
-  if (!pool.length) { showToast("Add some dramas first!"); return; }
-  const d = pool[Math.floor(Math.random()*pool.length)];
-  document.getElementById("randomContent").innerHTML = `
-    ${d.poster?`<img src="${d.poster}" style="width:120px;border-radius:12px;margin-bottom:12px">`:""}
-    <p style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">${escHtml(d.title)}</p>
-    <p style="font-size:13px;color:var(--muted);margin-top:4px">${d.year}${d.country?" · "+d.country:""}</p>
-    ${planList.length?`<p style="font-size:12px;color:var(--accent);margin-top:8px">from your Plan to Watch list ✦</p>`:""}`;
-  document.getElementById("randomBg").classList.add("open");
-}
-function closeRandom() { document.getElementById("randomBg").classList.remove("open"); }
-
-// ── Favourites & Delete ───────────────────────────────────────
-async function toggleFav(id, e) {
-  e.stopPropagation();
-  const d = dramas[id]; if (!d) return;
-  await set(ref(db, `dramas/${id}/fav`), !d.fav);
-}
-async function deleteDrama(id, e) {
-  e.stopPropagation();
-  if (!confirm("Remove this drama?")) return;
-  await remove(ref(db, `dramas/${id}`));
-  showToast("Drama removed");
-}
-
-// ── Sort & filter ─────────────────────────────────────────────
-function setSort(s) {
-  currentSort = s;
-  document.querySelectorAll(".filter-btn[data-sort]").forEach(b => {
-    b.classList.toggle("active", b.dataset.sort === s);
-  });
-  render();
-}
-
-// ── Render ────────────────────────────────────────────────────
-function setStatusFilter(val) {
-  filterStatus = filterStatus === val ? "" : val;
-  // update button styles
-  document.querySelectorAll(".status-filter-btn").forEach(b => {
-    b.classList.toggle("active", b.dataset.val === filterStatus);
-  });
-  render();
-}
-
-function setCountryFilter(val) {
-  filterCountry = filterCountry === val ? "" : val;
-  document.querySelectorAll(".country-filter-btn").forEach(b => {
-    b.classList.toggle("active", b.dataset.val === filterCountry);
-  });
-  render();
-}
-
-function clearFilters() {
-  filterStatus = ""; filterCountry = "";
-  document.getElementById("searchInput").value = "";
-  document.querySelectorAll(".status-filter-btn, .country-filter-btn").forEach(b => b.classList.remove("active"));
-  render();
-}
-
-function render() {
-  const q = (document.getElementById("searchInput")?.value || "").toLowerCase().trim();
-  let list = Object.values(dramas);
-
-  if (q)            list = list.filter(d => d.title.toLowerCase().includes(q) || (d.country||"").toLowerCase().includes(q) || (d.genres||[]).some(g => g.toLowerCase().includes(q)));
-  if (filterStatus) list = list.filter(d => (d.status||"") === filterStatus);
-  if (filterCountry)list = list.filter(d => (d.country||"") === filterCountry);
-
-  switch(currentSort) {
-    case "alpha":  list.sort((a,b)=>a.title.localeCompare(b.title)); break;
-    case "year":   list.sort((a,b)=>b.year-a.year); break;
-    case "fav":    list.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)); break;
-    case "rating": list.sort((a,b)=>(b.rating||0)-(a.rating||0)); break;
-    default:       list.sort((a,b)=>b.addedAt-a.addedAt);
-  }
-
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
-
-  if (!list.length) {
-    const hasFilter = q || filterStatus || filterCountry;
-    grid.innerHTML = `<div class="empty-state"><div class="es-emoji">🎭</div><p>${hasFilter ? "No dramas found" : "No dramas yet"}</p><span>${hasFilter ? "Try a different filter" : "Add your first drama above!"}</span>${hasFilter ? `<br><button onclick="clearFilters()" style="margin-top:14px;background:var(--accent);color:#fff;border:none;border-radius:50px;padding:9px 22px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer">Clear filters</button>` : ""}</div>`;
-  } else {
-    list.forEach((d,i)=>{
-      const card = document.createElement("div");
-      card.className = "drama-card";
-      card.style.animationDelay = (i*0.03)+"s";
-      card.onclick = () => openDetail(d.id);
-      const posterHTML = d.poster?`<img class="drama-poster" src="${d.poster}" alt="${escHtml(d.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` :"";
-      const phStyle = d.poster?"display:none":"";
-      const starsHTML = [1,2,3,4,5].map(i=>`<span class="star">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
-      const statusLabel = d.status || "";
-      const statusClassMap = {"Completed":"Completed","Watching":"Watching","Plan to Watch":"PlantoWatch","Dropped":"Dropped"};
-      const statusClass = d.status ? `status-${statusClassMap[d.status]||d.status.replace(/\s+/g,"")}` : "";
-      const genreTags = (d.genres||[]).slice(0,2).map(g=>`<span class="genre-tag">${g}</span>`).join("");
-      card.innerHTML = `
-        ${posterHTML}
-        <div class="poster-placeholder" style="${phStyle}">
-          <span class="ph-emoji">${countryEmoji(d.country)}</span>
-          <p class="ph-title">${escHtml(d.title)}</p>
-        </div>
-        ${d.fav?`<div class="fav-badge">★</div>`:""}
-        <button class="delete-btn" onclick="deleteDrama('${d.id}',event)">✕</button>
-        <div class="drama-info">
-          <div class="drama-title">${escHtml(d.title)}</div>
-          <div class="genre-tags">${genreTags}</div>
-          ${d.status?`<div class="status-badge"><span class="status-tag ${statusClass}">${statusLabel}</span></div>`:""}
-          <div class="drama-meta">
-            <span class="drama-year">${d.year}${d.country?" · "+d.country:""}${Object.keys(d.seasons||{}).length>1?" · "+Object.keys(d.seasons||{}).length+"S":""}</span>
-            <button class="fav-btn" onclick="toggleFav('${d.id}',event)">${d.fav?"★":"☆"}</button>
-          </div>
-          <div class="stars-row">${starsHTML}</div>
-        </div>`;
-      grid.appendChild(card);
-    });
-  }
-
-  const all   = Object.values(dramas);
-  const favs  = all.filter(d=>d.fav).length;
-  const watching = all.filter(d=>d.status==="Watching").length;
-  const planned  = all.filter(d=>d.status==="Plan to Watch").length;
-  document.getElementById("statsRow").innerHTML = `
-    <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">Total</div></div>
-    <div class="stat-card"><div class="stat-num">${favs}</div><div class="stat-label">Favourites</div></div>
-    <div class="stat-card"><div class="stat-num">${watching}</div><div class="stat-label">Watching</div></div>
-    <div class="stat-card"><div class="stat-num">${planned}</div><div class="stat-label">Plan to Watch</div></div>`;
-}
-
-// ── Milestone confetti ────────────────────────────────────────
-function checkMilestone(count) {
-  if ([10,50,100,200].includes(count)) {
-    showToast(`🎉 ${count} dramas! Amazing!`);
-    launchConfetti();
-  }
-}
-function launchConfetti() {
-  const canvas = document.getElementById("confetti");
-  const ctx = canvas.getContext("2d");
-  canvas.style.display = "block";
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const pieces = Array.from({length:120},()=>({
-    x: Math.random()*canvas.width, y: -10,
-    r: 4+Math.random()*6, d: 2+Math.random()*3,
-    color: ["#c9624a","#e8a87c","#f0d4a8","#f7e8e4","#a8d8c8"][Math.floor(Math.random()*5)],
-    tilt: Math.random()*10-5, tiltAngle: 0
-  }));
-  let frame = 0;
-  const anim = setInterval(()=>{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    pieces.forEach(p=>{
-      p.tiltAngle += 0.05; p.y += p.d; p.tilt = Math.sin(p.tiltAngle)*12;
-      ctx.beginPath(); ctx.lineWidth = p.r;
-      ctx.strokeStyle = p.color;
-      ctx.moveTo(p.x+p.tilt+p.r/2, p.y);
-      ctx.lineTo(p.x+p.tilt, p.y+p.tilt+p.r/2);
-      ctx.stroke();
-      if (p.y > canvas.height) { p.y = -10; p.x = Math.random()*canvas.width; }
-    });
-    if (++frame > 180) { clearInterval(anim); ctx.clearRect(0,0,canvas.width,canvas.height); canvas.style.display="none"; }
-  }, 16);
-}
-
-// ── Helpers ───────────────────────────────────────────────────
 function countryEmoji(c) {
   const m = {Korean:"🇰🇷",Chinese:"🇨🇳",Japanese:"🇯🇵",Thai:"🇹🇭",Taiwanese:"🇹🇼"};
   return m[c]||"🎭";
@@ -653,190 +123,477 @@ function spawnPetals() {
   });
 }
 
+// ── TMDB fetch ────────────────────────────────────────────────
+async function fetchTMDB(title) {
+  if (!TMDB_API_KEY || TMDB_API_KEY === "PASTE_YOUR_TMDB_KEY_HERE")
+    return { poster:"", year:new Date().getFullYear(), country:"Korean", genres:[], seasons:{} };
+  try {
+    const res  = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&language=en-US`);
+    const data = await res.json();
+    const results = (data.results||[]).filter(r=>r.poster_path);
+    if (!results.length) return { poster:"", year:new Date().getFullYear(), country:"Korean", genres:[], seasons:{} };
+    const best    = results.find(r=>r.media_type==="tv") || results[0];
+    const poster  = `https://image.tmdb.org/t/p/w300${best.poster_path}`;
+    const dateStr = best.first_air_date || best.release_date || "";
+    const year    = dateStr ? parseInt(dateStr.slice(0,4)) : new Date().getFullYear();
+    const country = mapCountry(best.origin_country);
+    const genres  = mapGenres(best.genre_ids);
+    const tmdbId  = best.id;
+    let seasons = {};
+    if (best.media_type === "tv" && tmdbId) {
+      try {
+        const showRes  = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`);
+        const showData = await showRes.json();
+        const realSeasons = (showData.seasons||[]).filter(s=>s.season_number>0);
+        if (realSeasons.length > 1) {
+          realSeasons.forEach(s => {
+            const sId = "s_"+s.season_number;
+            seasons[sId] = { id:sId, num:s.season_number, poster:s.poster_path?`https://image.tmdb.org/t/p/w300${s.poster_path}`:poster, status:"", episodes:"", totalEpisodes:s.episode_count||"", rating:0 };
+          });
+        }
+      } catch(e) {}
+    }
+    return { poster, year, country, genres, seasons };
+  } catch(e) { return { poster:"", year:new Date().getFullYear(), country:"Korean", genres:[], seasons:{} }; }
+}
+
+// ── Add drama ─────────────────────────────────────────────────
+async function addDrama() {
+  const title = document.getElementById("titleInput").value.trim();
+  if (!title) { showToast("✦ Please enter a drama title"); return; }
+  const exists = Object.values(dramas).find(d=>d.title.toLowerCase()===title.toLowerCase());
+  if (exists) { showToast("✦ Already in the list!"); return; }
+  const btn = document.getElementById("addBtn");
+  btn.disabled = true; btn.textContent = "Fetching info...";
+  const tmdb = await fetchTMDB(title);
+  const manualYear    = parseInt(document.getElementById("yearInput").value);
+  const manualCountry = document.getElementById("countryInput").value;
+  const id = "d_"+Date.now();
+  await set(ref(db,`dramas/${id}`), { id, title, year:manualYear||tmdb.year, country:manualCountry||tmdb.country, genres:tmdb.genres, fav:false, addedAt:Date.now(), poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"", seasons:tmdb.seasons||{} });
+  document.getElementById("titleInput").value = "";
+  document.getElementById("yearInput").value = "";
+  document.getElementById("countryInput").value = "";
+  showToast("✓ Added: "+title+(tmdb.poster?" 🖼":""));
+  btn.disabled = false; btn.textContent = "+ Add";
+}
+
+// ── Bulk add ──────────────────────────────────────────────────
+async function bulkAdd() {
+  const raw = document.getElementById("bulkInput").value.trim();
+  if (!raw) { showToast("✦ Paste some drama titles first"); return; }
+  const lines = [...new Set(raw.split("\n").map(l=>l.trim()).filter(l=>l.length>0))];
+  const existingTitles = Object.values(dramas).map(d=>d.title.toLowerCase());
+  const toAdd = lines.filter(l=>!existingTitles.includes(l.toLowerCase()));
+  const skipped = lines.length - toAdd.length;
+  if (!toAdd.length) { showToast("All dramas already in the list!"); return; }
+  const btn = document.getElementById("bulkBtn");
+  const progress = document.getElementById("bulkProgress");
+  btn.disabled = true;
+  progress.innerHTML = `<div>Adding <strong>${toAdd.length}</strong> dramas${skipped?` (${skipped} skipped)`:""}... 🌸</div><div class="prog-bar-wrap"><div class="prog-bar" id="progBar" style="width:0%"></div></div>`;
+  let done = 0;
+  for (const title of toAdd) {
+    const tmdb = await fetchTMDB(title);
+    const id = "d_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
+    await set(ref(db,`dramas/${id}`), { id, title, year:tmdb.year, country:tmdb.country, genres:tmdb.genres, fav:false, addedAt:Date.now()-(toAdd.length-done)*10, poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"", seasons:tmdb.seasons||{} });
+    done++;
+    document.getElementById("progBar").style.width = Math.round(done/toAdd.length*100)+"%";
+    progress.querySelector("div").textContent = `Added ${done} of ${toAdd.length}${skipped?` (${skipped} skipped)`:""}... 🌸`;
+    await new Promise(r=>setTimeout(r,300));
+  }
+  progress.innerHTML = `✓ Done! Added <strong>${done}</strong> dramas${skipped?`, skipped ${skipped} duplicates`:""} 🎉`;
+  document.getElementById("bulkInput").value = "";
+  btn.disabled = false;
+  showToast(`✓ Imported ${done} dramas!`);
+}
+
+// ── Detail modal ──────────────────────────────────────────────
+let currentDetailId = "";
+let currentTab = "info";
+
+function openDetail(id) {
+  currentDetailId = id;
+  currentTab = "info";
+  renderDetail();
+  document.getElementById("detailBg").classList.add("open");
+}
+
+function closeDetail() {
+  document.getElementById("detailBg").classList.remove("open");
+  currentDetailId = "";
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  renderDetail();
+}
+
+function renderDetail() {
+  const id = currentDetailId;
+  const d  = dramas[id];
+  if (!d) return;
+  const genreHTML  = (d.genres||[]).map(g=>`<span class="detail-genre">${g}</span>`).join("");
+  const posterHTML = d.poster ? `<img src="${d.poster}" style="width:100%;border-radius:10px" onerror="this.style.display='none'">` : `<div class="detail-poster-ph">${countryEmoji(d.country)}</div>`;
+  const ratingHTML = [1,2,3,4,5].map(i=>`<span class="detail-star" onclick="setRating('${id}',${i})" id="star_${id}_${i}">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
+  const seasons    = d.seasons || {};
+  const seasonCount= Object.keys(seasons).length;
+  const infoActive    = currentTab==="info"    ? "active":"";
+  const seasonsActive = currentTab==="seasons" ? "active":"";
+  let seasonsHTML = "";
+  if (currentTab === "seasons") {
+    const seasonList = Object.values(seasons).sort((a,b)=>a.num-b.num);
+    seasonsHTML = `<div class="seasons-list">${seasonList.map(s=>seasonRowHTML(id,s)).join("")}</div>${isAdmin?`<button class="btn-add-season" onclick="addSeason('${id}')">+ Add Season</button>`:""}`;
+  }
+  const infoHTML = currentTab === "info" ? `
+    <div class="detail-row">
+      <div class="detail-field">
+        <div class="detail-label">Overall Status</div>
+        <select class="detail-select" id="det_status" onchange="saveField('${id}','status',this.value)">
+          <option value="" ${!d.status?"selected":""}>— Not set —</option>
+          <option value="Completed" ${d.status==="Completed"?"selected":""}>✅ Completed</option>
+          <option value="Watching" ${d.status==="Watching"?"selected":""}>▶️ Watching</option>
+          <option value="Plan to Watch" ${d.status==="Plan to Watch"?"selected":""}>📌 Plan to Watch</option>
+          <option value="Dropped" ${d.status==="Dropped"?"selected":""}>❌ Dropped</option>
+        </select>
+      </div>
+      <div class="detail-field">
+        <div class="detail-label">Rewatches</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button onclick="changeRewatch('${id}',-1)" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:var(--text)">−</button>
+          <span id="rewatch_${id}" style="font-size:16px;font-weight:500;min-width:20px;text-align:center">${d.rewatches||0}</span>
+          <button onclick="changeRewatch('${id}',1)" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:var(--text)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="detail-field" style="margin-bottom:14px">
+      <div class="detail-label">Personal notes</div>
+      <textarea class="detail-textarea" id="det_notes" placeholder="Your thoughts...">${escHtml(d.notes||"")}</textarea>
+    </div>
+    <div class="detail-field">
+      <div class="detail-label">OST (YouTube link)</div>
+      <div class="ost-input-row">
+        <input class="detail-input" id="det_ost" type="url" placeholder="Paste YouTube URL..." value="${escHtml(d.ost||"")}">
+        <button class="play-ost-btn" onclick="playOST('${id}')">▶ Play</button>
+      </div>
+    </div>
+    <button class="detail-save" onclick="saveDetail('${id}')">Save changes ✦</button>` : "";
+  document.getElementById("detailContent").innerHTML = `
+    <div class="detail-top">
+      <div class="detail-poster">${posterHTML}</div>
+      <div class="detail-info">
+        <div class="detail-title">${escHtml(d.title)}</div>
+        <div class="detail-sub">${d.year}${d.country?" · "+d.country:""}${seasonCount?` · ${seasonCount} season${seasonCount>1?"s":""}`:""}</div>
+        <div class="detail-genres">${genreHTML}</div>
+        <div class="detail-label" style="margin-top:8px">Overall Rating</div>
+        <div class="detail-stars">${ratingHTML}</div>
+      </div>
+    </div>
+    <div class="detail-tabs">
+      <button class="detail-tab ${infoActive}" onclick="switchTab('info')">Info</button>
+      <button class="detail-tab ${seasonsActive}" onclick="switchTab('seasons')">Seasons ${seasonCount?`<span class="season-count">${seasonCount}</span>`:""}</button>
+    </div>
+    ${infoHTML}${seasonsHTML}`;
+}
+
+function seasonRowHTML(dramaId, s) {
+  const scMap = {"Completed":"Completed","Watching":"Watching","Plan to Watch":"PlantoWatch","Dropped":"Dropped"};
+  const sc = s.status ? `status-${scMap[s.status]||""}` : "";
+  return `
+    <div class="season-row" id="srow_${s.id}">
+      <div class="season-poster" onclick="openPosterLightbox('${s.poster||""}')" style="cursor:${s.poster?'pointer':'default'}">
+        ${s.poster?`<img src="${s.poster}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ""}
+        <div style="${s.poster?"display:none;":""}width:100%;height:100%;background:linear-gradient(135deg,var(--pink),var(--gold));display:flex;align-items:center;justify-content:center;font-size:16px;border-radius:6px">S${s.num}</div>
+      </div>
+      <div class="season-info">
+        <div class="season-title">Season ${s.num}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
+          ${s.status?`<span class="status-tag ${sc}" style="font-size:10px">${s.status}</span>`:""}
+          ${s.episodes?`<span style="font-size:11px;color:var(--muted)">Ep ${s.episodes}${s.totalEpisodes?"/"+s.totalEpisodes:""}</span>`:""}
+        </div>
+        <div style="display:flex;gap:2px;margin-top:3px">${[1,2,3,4,5].map(i=>`<span style="font-size:11px;color:var(--accent2)">${i<=(s.rating||0)?"★":"☆"}</span>`).join("")}</div>
+      </div>
+      ${isAdmin?`<button class="season-edit-btn" onclick="openSeasonEdit('${dramaId}','${s.id}')">✎</button>`:""}
+    </div>`;
+}
+
+async function addSeason(dramaId) {
+  const d = dramas[dramaId]; if (!d) return;
+  const seasons = d.seasons || {};
+  const nextNum = Object.keys(seasons).length + 1;
+  const sId = "s_"+Date.now();
+  let poster = d.poster || "";
+  if (TMDB_API_KEY && TMDB_API_KEY !== "PASTE_YOUR_TMDB_KEY_HERE") {
+    try {
+      const res  = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(d.title)}&language=en-US`);
+      const data = await res.json();
+      const show = data.results?.[0];
+      if (show) {
+        const sRes  = await fetch(`https://api.themoviedb.org/3/tv/${show.id}/season/${nextNum}?api_key=${TMDB_API_KEY}&language=en-US`);
+        const sData = await sRes.json();
+        if (sData.poster_path) poster = `https://image.tmdb.org/t/p/w300${sData.poster_path}`;
+      }
+    } catch(e) {}
+  }
+  await set(ref(db,`dramas/${dramaId}/seasons/${sId}`), { id:sId, num:nextNum, poster, status:"", episodes:"", totalEpisodes:"", rating:0 });
+  showToast(`✓ Season ${nextNum} added!`);
+}
+
+let currentSeasonId = "", currentSeasonDrama = "";
+
+function openSeasonEdit(dramaId, sId) {
+  currentSeasonDrama = dramaId; currentSeasonId = sId;
+  const s = dramas[dramaId]?.seasons?.[sId]; if (!s) return;
+  document.getElementById("sNum").textContent = `Season ${s.num}`;
+  document.getElementById("sStatus").value = s.status || "";
+  document.getElementById("sEp").value = s.episodes || "";
+  document.getElementById("sTep").value = s.totalEpisodes || "";
+  document.getElementById("sRatingVal").textContent = s.rating || 0;
+  renderSeasonStars(s.rating || 0);
+  document.getElementById("seasonEditBg").classList.add("open");
+}
+function closeSeasonEdit() { document.getElementById("seasonEditBg").classList.remove("open"); }
+function renderSeasonStars(val) { document.querySelectorAll(".s-star").forEach((el,i)=>{ el.textContent = i < val ? "★" : "☆"; }); }
+function setSeasonRating(val) {
+  const current = parseInt(document.getElementById("sRatingVal").textContent) || 0;
+  const newVal = current === val ? 0 : val;
+  document.getElementById("sRatingVal").textContent = newVal;
+  renderSeasonStars(newVal);
+}
+async function saveSeasonEdit() {
+  const status = document.getElementById("sStatus").value;
+  const episodes = document.getElementById("sEp").value;
+  const totalEpisodes = document.getElementById("sTep").value;
+  const rating = parseInt(document.getElementById("sRatingVal").textContent) || 0;
+  await set(ref(db,`dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/status`), status);
+  await set(ref(db,`dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/episodes`), episodes);
+  await set(ref(db,`dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/totalEpisodes`), totalEpisodes);
+  await set(ref(db,`dramas/${currentSeasonDrama}/seasons/${currentSeasonId}/rating`), rating);
+  closeSeasonEdit(); showToast("✓ Season saved!"); renderDetail();
+}
+async function deleteSeasonEdit() {
+  if (!confirm("Remove this season?")) return;
+  await remove(ref(db,`dramas/${currentSeasonDrama}/seasons/${currentSeasonId}`));
+  closeSeasonEdit(); showToast("Season removed"); renderDetail();
+}
+
+async function saveField(id, field, value) { await set(ref(db,`dramas/${id}/${field}`), value); }
+
+async function setRating(id, val) {
+  const current = dramas[id]?.rating || 0;
+  const newRating = current === val ? 0 : val;
+  await set(ref(db,`dramas/${id}/rating`), newRating);
+  for (let i=1;i<=5;i++) { const el=document.getElementById(`star_${id}_${i}`); if(el) el.textContent=i<=newRating?"★":"☆"; }
+}
+async function changeRewatch(id, delta) {
+  const newVal = Math.max(0,(dramas[id]?.rewatches||0)+delta);
+  await set(ref(db,`dramas/${id}/rewatches`), newVal);
+  const el = document.getElementById(`rewatch_${id}`); if(el) el.textContent = newVal;
+}
+async function saveDetail(id) {
+  await set(ref(db,`dramas/${id}/notes`), document.getElementById("det_notes")?.value||"");
+  await set(ref(db,`dramas/${id}/ost`), document.getElementById("det_ost")?.value||"");
+  showToast("✓ Saved!"); closeDetail();
+}
+
+// ── OST Player ────────────────────────────────────────────────
+function playOST(id) {
+  const ost = document.getElementById("det_ost")?.value || dramas[id]?.ost || "";
+  if (!ost) { showToast("✦ Paste a YouTube URL first"); return; }
+  const ytId = (ost.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/)||[])[1];
+  if (!ytId) { showToast("✦ Couldn't read that YouTube URL"); return; }
+  document.getElementById("ostTitle").textContent = "🎵 "+(dramas[id]?.title||"OST");
+  document.getElementById("ostFrame").innerHTML = `<iframe width="100%" height="200" src="https://www.youtube.com/embed/${ytId}?autoplay=1" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen></iframe>`;
+  document.getElementById("ostPlayer").style.display = "block";
+  closeDetail();
+}
+function closeOST() { document.getElementById("ostPlayer").style.display="none"; document.getElementById("ostFrame").innerHTML=""; }
+
+// ── Random pick ───────────────────────────────────────────────
+function randomPick() {
+  const planList = Object.values(dramas).filter(d=>d.status==="Plan to Watch");
+  const pool = planList.length ? planList : Object.values(dramas);
+  if (!pool.length) { showToast("Add some dramas first!"); return; }
+  const d = pool[Math.floor(Math.random()*pool.length)];
+  document.getElementById("randomContent").innerHTML = `
+    ${d.poster?`<img src="${d.poster}" style="width:120px;border-radius:12px;margin-bottom:12px">`:""}
+    <p style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">${escHtml(d.title)}</p>
+    <p style="font-size:13px;color:var(--muted);margin-top:4px">${d.year}${d.country?" · "+d.country:""}</p>
+    ${planList.length?`<p style="font-size:12px;color:var(--accent);margin-top:8px">from your Plan to Watch list ✦</p>`:""}`;
+  document.getElementById("randomBg").classList.add("open");
+}
+function closeRandom() { document.getElementById("randomBg").classList.remove("open"); }
+
+// ── Favourites & Delete ───────────────────────────────────────
+async function toggleFav(id, e) {
+  e.stopPropagation();
+  const d = dramas[id]; if (!d) return;
+  await set(ref(db,`dramas/${id}/fav`), !d.fav);
+}
+async function deleteDrama(id, e) {
+  e.stopPropagation();
+  if (!confirm("Remove this drama?")) return;
+  await remove(ref(db,`dramas/${id}`)); showToast("Drama removed");
+}
+
+// ── Sort & Filters ────────────────────────────────────────────
+function setSort(s) {
+  currentSort = s;
+  document.querySelectorAll(".filter-btn[data-sort]").forEach(b=>b.classList.toggle("active",b.dataset.sort===s));
+  render();
+}
+function setStatusFilter(val) {
+  filterStatus = filterStatus===val ? "" : val;
+  document.querySelectorAll(".status-filter-btn").forEach(b=>b.classList.toggle("active",b.dataset.val===filterStatus));
+  render();
+}
+function setCountryFilter(val) {
+  filterCountry = filterCountry===val ? "" : val;
+  document.querySelectorAll(".country-filter-btn").forEach(b=>b.classList.toggle("active",b.dataset.val===filterCountry));
+  render();
+}
+function clearFilters() {
+  filterStatus=""; filterCountry="";
+  document.getElementById("searchInput").value="";
+  document.querySelectorAll(".status-filter-btn,.country-filter-btn").forEach(b=>b.classList.remove("active"));
+  render();
+}
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  const q = (document.getElementById("searchInput")?.value||"").toLowerCase().trim();
+  let list = Object.values(dramas);
+  if (q)             list = list.filter(d=>d.title.toLowerCase().includes(q)||(d.country||"").toLowerCase().includes(q)||(d.genres||[]).some(g=>g.toLowerCase().includes(q)));
+  if (filterStatus)  list = list.filter(d=>(d.status||"")===filterStatus);
+  if (filterCountry) list = list.filter(d=>(d.country||"")===filterCountry);
+  switch(currentSort) {
+    case "alpha":  list.sort((a,b)=>a.title.localeCompare(b.title)); break;
+    case "year":   list.sort((a,b)=>b.year-a.year); break;
+    case "fav":    list.sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)); break;
+    case "rating": list.sort((a,b)=>(b.rating||0)-(a.rating||0)); break;
+    default:       list.sort((a,b)=>b.addedAt-a.addedAt);
+  }
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  if (!list.length) {
+    const hasFilter = q||filterStatus||filterCountry;
+    grid.innerHTML = `<div class="empty-state"><div class="es-emoji">🎭</div><p>${hasFilter?"No dramas found":"No dramas yet"}</p><span>${hasFilter?"Try a different filter":"Add your first drama above!"}</span>${hasFilter?`<br><button onclick="clearFilters()" style="margin-top:14px;background:var(--accent);color:#fff;border:none;border-radius:50px;padding:9px 22px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer">Clear filters</button>`:""}</div>`;
+  } else {
+    list.forEach((d,i)=>{
+      const card = document.createElement("div");
+      card.className = "drama-card";
+      card.style.animationDelay = (i*0.03)+"s";
+      card.onclick = ()=>openDetail(d.id);
+      const phStyle = d.poster?"display:none":"";
+      const starsHTML = [1,2,3,4,5].map(i=>`<span class="star">${i<=(d.rating||0)?"★":"☆"}</span>`).join("");
+      const scMap = {"Completed":"Completed","Watching":"Watching","Plan to Watch":"PlantoWatch","Dropped":"Dropped"};
+      const statusClass = d.status?`status-${scMap[d.status]||d.status.replace(/\s+/g,"")}` : "";
+      const genreTags = (d.genres||[]).slice(0,2).map(g=>`<span class="genre-tag">${g}</span>`).join("");
+      const seasonCount = Object.keys(d.seasons||{}).length;
+      card.innerHTML = `
+        ${d.poster?`<img class="drama-poster" src="${d.poster}" alt="${escHtml(d.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` :""}
+        <div class="poster-placeholder" style="${phStyle}">
+          <span class="ph-emoji">${countryEmoji(d.country)}</span>
+          <p class="ph-title">${escHtml(d.title)}</p>
+        </div>
+        ${d.fav?`<div class="fav-badge">★</div>`:""}
+        <button class="delete-btn" onclick="deleteDrama('${d.id}',event)">✕</button>
+        <div class="drama-info">
+          <div class="drama-title">${escHtml(d.title)}</div>
+          <div class="genre-tags">${genreTags}</div>
+          ${d.status?`<div class="status-badge"><span class="status-tag ${statusClass}">${d.status}</span></div>`:""}
+          <div class="drama-meta">
+            <span class="drama-year">${d.year}${d.country?" · "+d.country:""}${seasonCount>1?" · "+seasonCount+"S":""}</span>
+            <button class="fav-btn" onclick="toggleFav('${d.id}',event)">${d.fav?"★":"☆"}</button>
+          </div>
+          <div class="stars-row">${starsHTML}</div>
+        </div>`;
+      grid.appendChild(card);
+    });
+  }
+  const all = Object.values(dramas);
+  document.getElementById("statsRow").innerHTML = `
+    <div class="stat-card"><div class="stat-num">${all.length}</div><div class="stat-label">Total</div></div>
+    <div class="stat-card"><div class="stat-num">${all.filter(d=>d.fav).length}</div><div class="stat-label">Favourites</div></div>
+    <div class="stat-card"><div class="stat-num">${all.filter(d=>d.status==="Watching").length}</div><div class="stat-label">Watching</div></div>
+    <div class="stat-card"><div class="stat-num">${all.filter(d=>d.status==="Plan to Watch").length}</div><div class="stat-label">Plan to Watch</div></div>`;
+}
+
+// ── Confetti ──────────────────────────────────────────────────
+function checkMilestone(count) {
+  if ([10,50,100,200].includes(count)) { showToast(`🎉 ${count} dramas! Amazing!`); launchConfetti(); }
+}
+function launchConfetti() {
+  const canvas = document.getElementById("confetti");
+  const ctx = canvas.getContext("2d");
+  canvas.style.display = "block";
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const pieces = Array.from({length:120},()=>({ x:Math.random()*canvas.width, y:-10, r:4+Math.random()*6, d:2+Math.random()*3, color:["#c9624a","#e8a87c","#f0d4a8","#f7e8e4","#a8d8c8"][Math.floor(Math.random()*5)], tilt:Math.random()*10-5, tiltAngle:0 }));
+  let frame = 0;
+  const anim = setInterval(()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pieces.forEach(p=>{ p.tiltAngle+=0.05; p.y+=p.d; p.tilt=Math.sin(p.tiltAngle)*12; ctx.beginPath(); ctx.lineWidth=p.r; ctx.strokeStyle=p.color; ctx.moveTo(p.x+p.tilt+p.r/2,p.y); ctx.lineTo(p.x+p.tilt,p.y+p.tilt+p.r/2); ctx.stroke(); if(p.y>canvas.height){p.y=-10;p.x=Math.random()*canvas.width;} });
+    if(++frame>180){clearInterval(anim);ctx.clearRect(0,0,canvas.width,canvas.height);canvas.style.display="none";}
+  },16);
+}
+
 // ── Actor Cards ───────────────────────────────────────────────
 const ACTOR_SLOTS = [
-  { key: "fav",       crown: "🌟", role: "Favourite Actor"  },
-  { key: "handsome",  crown: "👑", role: "Most Handsome"    },
-  { key: "beautiful", crown: "🌸", role: "Most Beautiful"   }
+  { key:"fav",       crown:"🌟", role:"Favourite Actor" },
+  { key:"handsome",  crown:"👑", role:"Most Handsome"   },
+  { key:"beautiful", crown:"🌸", role:"Most Beautiful"  }
 ];
+let actorData = {};
+const actorsRef = ref(db,"actors");
+onValue(actorsRef, (snapshot)=>{ actorData = snapshot.val()||{}; renderActors(); });
 
 function renderActors() {
-  const section = document.getElementById("actorsSection");
-  if (!section) return;
-  section.innerHTML = ACTOR_SLOTS.map(slot => {
-    const a = actorData[slot.key] || {};
-    const photoHTML = a.photo
-      ? `<img src="${escHtml(a.photo)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-      : "";
-    const phStyle = a.photo ? "display:none" : "";
+  const section = document.getElementById("actorsSection"); if (!section) return;
+  section.innerHTML = ACTOR_SLOTS.map(slot=>{
+    const a = actorData[slot.key]||{};
     return `
       <div class="actor-card">
         <div class="actor-photo-wrap">
-          ${photoHTML}
-          <div class="actor-photo-placeholder" style="${phStyle}">${slot.crown}</div>
+          ${a.photo?`<img src="${escHtml(a.photo)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` :""}
+          <div class="actor-photo-placeholder" style="${a.photo?"display:none":""}">${slot.crown}</div>
           <button class="actor-edit-btn" onclick="openActorModal('${slot.key}')">✎</button>
         </div>
         <div class="actor-body">
           <div class="actor-crown">${slot.crown}</div>
           <div class="actor-role">${slot.role}</div>
-          <div class="actor-name">${escHtml(a.name || "Add actor")}</div>
-          ${a.note ? `<div class="actor-note">${escHtml(a.note)}</div>` : ""}
+          <div class="actor-name">${escHtml(a.name||"Add actor")}</div>
+          ${a.note?`<div class="actor-note">${escHtml(a.note)}</div>`:""}
         </div>
       </div>`;
   }).join("");
 }
 
-let actorData = {};
-
-// load from firebase
-const actorsRef = ref(db, "actors");
-onValue(actorsRef, (snapshot) => {
-  actorData = snapshot.val() || {};
-  renderActors();
-});
-
 let currentActorSlot = "";
-
 function openActorModal(key) {
   if (!isAdmin) return;
   currentActorSlot = key;
-  const slot = ACTOR_SLOTS.find(s => s.key === key);
-  const a = actorData[key] || {};
-  document.getElementById("actorModalTitle").textContent = slot.crown + " " + slot.role;
-  document.getElementById("actorNameInput").value  = a.name  || "";
-  document.getElementById("actorPhotoInput").value = a.photo || "";
-  document.getElementById("actorNoteInput").value  = a.note  || "";
+  const slot = ACTOR_SLOTS.find(s=>s.key===key);
+  const a = actorData[key]||{};
+  document.getElementById("actorModalTitle").textContent = slot.crown+" "+slot.role;
+  document.getElementById("actorNameInput").value  = a.name||"";
+  document.getElementById("actorPhotoInput").value = a.photo||"";
+  document.getElementById("actorNoteInput").value  = a.note||"";
   updateActorPreview();
   document.getElementById("actorBg").classList.add("open");
 }
-
-function closeActorModal() {
-  document.getElementById("actorBg").classList.remove("open");
-}
-
+function closeActorModal() { document.getElementById("actorBg").classList.remove("open"); }
 function updateActorPreview() {
   const url = document.getElementById("actorPhotoInput").value.trim();
   const preview = document.getElementById("actorPreviewImg");
-  const ph      = document.getElementById("actorPreviewPh");
-  if (url) {
-    preview.src = url;
-    preview.style.display = "block";
-    ph.style.display = "none";
-  } else {
-    preview.style.display = "none";
-    ph.style.display = "flex";
-  }
+  const ph = document.getElementById("actorPreviewPh");
+  if (url) { preview.src=url; preview.style.display="block"; ph.style.display="none"; }
+  else { preview.style.display="none"; ph.style.display="flex"; }
 }
-
 async function saveActor() {
   const name  = document.getElementById("actorNameInput").value.trim();
   const photo = document.getElementById("actorPhotoInput").value.trim();
   const note  = document.getElementById("actorNoteInput").value.trim();
-  await set(ref(db, `actors/${currentActorSlot}`), { name, photo, note });
-  closeActorModal();
-  showToast("✓ Saved!");
+  await set(ref(db,`actors/${currentActorSlot}`), { name, photo, note });
+  closeActorModal(); showToast("✓ Saved!");
 }
-
-// ── Guinea Pig ────────────────────────────────────────────────
-(function() {
-  const gp       = document.getElementById("guineaPig");
-  const svg      = gp.querySelector("svg");
-  let direction  = 1;   // 1 = right, -1 = left
-  let running    = false;
-  let sniffTimer = null;
-
-  function runAcross() {
-    if (running) return;
-    running = true;
-
-    // flip direction each run
-    if (direction === 1) {
-      // running right — face right (default)
-      svg.style.transform = "scaleX(1)";
-      gp.style.left = "-80px";
-      gp.style.transition = "none";
-
-      // run to right edge
-      const duration = 6000 + Math.random() * 4000;
-      setTimeout(() => {
-        gp.style.transition = `left ${duration}ms linear`;
-        gp.style.left = "calc(100vw + 80px)";
-      }, 50);
-
-      // mid-way stop to sniff
-      sniffTimer = setTimeout(() => {
-        const stopX = (20 + Math.random() * 60) + "vw";
-        gp.style.transition = "left 0.4s ease-out";
-        gp.style.left = stopX;
-        setTimeout(() => {
-          // sniff animation — bob up down
-          gp.style.bottom = "18px";
-          setTimeout(() => { gp.style.bottom = "10px";
-          setTimeout(() => { gp.style.bottom = "16px";
-          setTimeout(() => { gp.style.bottom = "10px";
-          setTimeout(() => {
-            // continue running
-            gp.style.transition = `left ${duration * 0.5}ms linear`;
-            gp.style.left = "calc(100vw + 80px)";
-          }, 300); }, 200); }, 200); }, 200);
-        }, 400);
-      }, duration * 0.35);
-
-      setTimeout(() => {
-        direction = -1;
-        running = false;
-      }, duration + 800);
-
-    } else {
-      // running left — flip horizontally
-      svg.style.transform = "scaleX(-1)";
-      gp.style.left = "calc(100vw + 80px)";
-      gp.style.transition = "none";
-
-      const duration = 6000 + Math.random() * 4000;
-      setTimeout(() => {
-        gp.style.transition = `left ${duration}ms linear`;
-        gp.style.left = "-80px";
-      }, 50);
-
-      sniffTimer = setTimeout(() => {
-        const stopX = (20 + Math.random() * 60) + "vw";
-        gp.style.transition = "left 0.4s ease-out";
-        gp.style.left = stopX;
-        setTimeout(() => {
-          gp.style.bottom = "18px";
-          setTimeout(() => { gp.style.bottom = "10px";
-          setTimeout(() => { gp.style.bottom = "16px";
-          setTimeout(() => { gp.style.bottom = "10px";
-          setTimeout(() => {
-            gp.style.transition = `left ${duration * 0.5}ms linear`;
-            gp.style.left = "-80px";
-          }, 300); }, 200); }, 200); }, 200);
-        }, 400);
-      }, duration * 0.35);
-
-      setTimeout(() => {
-        direction = 1;
-        running = false;
-      }, duration + 800);
-    }
-  }
-
-  function gpSqueak() {
-    showToast("🐾 wheek wheek!");
-    // run immediately when clicked
-    if (!running) runAcross();
-  }
-  window.gpSqueak = gpSqueak;
-
-  // first run after 4 seconds, then every 25-45 seconds
-  setTimeout(() => {
-    runAcross();
-    setInterval(() => {
-      if (!running) runAcross();
-    }, 25000 + Math.random() * 20000);
-  }, 4000);
-})();
 
 // ── Poster Lightbox ───────────────────────────────────────────
 function openPosterLightbox(url) {
@@ -844,30 +601,61 @@ function openPosterLightbox(url) {
   document.getElementById("lightboxImg").src = url;
   document.getElementById("lightboxBg").classList.add("open");
 }
-function closeLightbox() {
-  document.getElementById("lightboxBg").classList.remove("open");
-}
+function closeLightbox() { document.getElementById("lightboxBg").classList.remove("open"); }
 
-// ── Event listeners ───────────────────────────────────────────
+// ── Guinea Pig ────────────────────────────────────────────────
+(function() {
+  const gp = document.getElementById("guineaPig");
+  if (!gp) return;
+  const svg = gp.querySelector("svg");
+  let direction = 1, running = false;
+
+  function runAcross() {
+    if (running) return;
+    running = true;
+    const duration = 7000 + Math.random()*4000;
+    if (direction === 1) {
+      svg.style.transform = "scaleX(1)";
+      gp.style.transition = "none";
+      gp.style.left = "-80px";
+      setTimeout(()=>{ gp.style.transition=`left ${duration}ms linear`; gp.style.left="calc(100vw + 80px)"; }, 50);
+      const stopAt = (20+Math.random()*50)+"vw";
+      setTimeout(()=>{
+        gp.style.transition="left 0.5s ease-out"; gp.style.left=stopAt;
+        setTimeout(()=>{ gp.style.bottom="18px"; setTimeout(()=>{ gp.style.bottom="10px"; setTimeout(()=>{ gp.style.bottom="16px"; setTimeout(()=>{ gp.style.bottom="10px";
+          setTimeout(()=>{ gp.style.transition=`left ${duration*0.5}ms linear`; gp.style.left="calc(100vw + 80px)"; }, 300); },200); },200); },200); }, 400);
+      }, duration*0.4);
+    } else {
+      svg.style.transform = "scaleX(-1)";
+      gp.style.transition = "none";
+      gp.style.left = "calc(100vw + 80px)";
+      setTimeout(()=>{ gp.style.transition=`left ${duration}ms linear`; gp.style.left="-80px"; }, 50);
+      const stopAt = (30+Math.random()*50)+"vw";
+      setTimeout(()=>{
+        gp.style.transition="left 0.5s ease-out"; gp.style.left=stopAt;
+        setTimeout(()=>{ gp.style.bottom="18px"; setTimeout(()=>{ gp.style.bottom="10px"; setTimeout(()=>{ gp.style.bottom="16px"; setTimeout(()=>{ gp.style.bottom="10px";
+          setTimeout(()=>{ gp.style.transition=`left ${duration*0.5}ms linear`; gp.style.left="-80px"; }, 300); },200); },200); },200); }, 400);
+      }, duration*0.4);
+    }
+    setTimeout(()=>{ direction = direction===1?-1:1; running=false; }, duration+1000);
+  }
+
+  window.gpSqueak = function() { showToast("🐾 wheek wheek!"); if(!running) runAcross(); };
+  setTimeout(()=>{ runAcross(); setInterval(()=>{ if(!running) runAcross(); }, 30000+Math.random()*20000); }, 4000);
+})();
+
+// ── Event Listeners ───────────────────────────────────────────
 document.getElementById("modalBg").addEventListener("click",function(e){if(e.target===this)closePasswordModal()});
 document.getElementById("detailBg").addEventListener("click",function(e){if(e.target===this)closeDetail()});
 document.getElementById("randomBg").addEventListener("click",function(e){if(e.target===this)closeRandom()});
 document.getElementById("noteBg").addEventListener("click",function(e){if(e.target===this)closeNote()});
 document.getElementById("seasonEditBg").addEventListener("click",function(e){if(e.target===this)closeSeasonEdit()});
-
-// search — wired directly so it always works inside a module
-document.getElementById("searchInput").addEventListener("input", render);
-
-// sort buttons
-document.querySelectorAll(".filter-btn[data-sort]").forEach(btn => {
-  btn.addEventListener("click", () => setSort(btn.dataset.sort, btn));
-});
-
 document.getElementById("actorBg").addEventListener("click",function(e){if(e.target===this)closeActorModal()});
+document.getElementById("lightboxBg").addEventListener("click", closeLightbox);
+document.getElementById("searchInput").addEventListener("input", render);
+document.querySelectorAll(".filter-btn[data-sort]").forEach(btn=>btn.addEventListener("click",()=>setSort(btn.dataset.sort)));
 
 // ── Expose to HTML ────────────────────────────────────────────
-document.getElementById("lightboxBg").addEventListener("click", closeLightbox);
-
 window.openPasswordModal=openPasswordModal; window.closePasswordModal=closePasswordModal;
 window.checkPassword=checkPassword; window.addDrama=addDrama; window.bulkAdd=bulkAdd;
 window.toggleFav=toggleFav; window.deleteDrama=deleteDrama; window.setSort=setSort;
