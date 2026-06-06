@@ -103,20 +103,44 @@ function mapGenres(ids) {
 // ── TMDB fetch ────────────────────────────────────────────────
 async function fetchTMDB(title) {
   if (!TMDB_API_KEY || TMDB_API_KEY === "PASTE_YOUR_TMDB_KEY_HERE")
-    return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[] };
+    return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[], seasons:{}, tmdbId:null };
   try {
     const res  = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(title)}&language=en-US`);
     const data = await res.json();
     const results = (data.results||[]).filter(r=>r.poster_path);
-    if (!results.length) return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[] };
-    const best   = results.find(r=>r.media_type==="tv") || results[0];
-    const poster = `https://image.tmdb.org/t/p/w300${best.poster_path}`;
-    const dateStr= best.first_air_date || best.release_date || "";
-    const year   = dateStr ? parseInt(dateStr.slice(0,4)) : new Date().getFullYear();
-    const country= mapCountry(best.origin_country);
-    const genres = mapGenres(best.genre_ids);
-    return { poster, year, country, genres };
-  } catch(e) { return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[] }; }
+    if (!results.length) return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[], seasons:{}, tmdbId:null };
+    const best    = results.find(r=>r.media_type==="tv") || results[0];
+    const poster  = `https://image.tmdb.org/t/p/w300${best.poster_path}`;
+    const dateStr = best.first_air_date || best.release_date || "";
+    const year    = dateStr ? parseInt(dateStr.slice(0,4)) : new Date().getFullYear();
+    const country = mapCountry(best.origin_country);
+    const genres  = mapGenres(best.genre_ids);
+    const tmdbId  = best.id;
+
+    // fetch full show details to get seasons
+    let seasons = {};
+    if (best.media_type === "tv" && tmdbId) {
+      try {
+        const showRes  = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`);
+        const showData = await showRes.json();
+        const realSeasons = (showData.seasons||[]).filter(s => s.season_number > 0);
+        if (realSeasons.length > 1) {
+          // only auto-create seasons if there are multiple
+          realSeasons.forEach(s => {
+            const sId = "s_" + s.season_number;
+            seasons[sId] = {
+              id: sId,
+              num: s.season_number,
+              poster: s.poster_path ? `https://image.tmdb.org/t/p/w300${s.poster_path}` : poster,
+              status: "", episodes: "", totalEpisodes: s.episode_count || "", rating: 0
+            };
+          });
+        }
+      } catch(e) { /* skip seasons if fetch fails */ }
+    }
+
+    return { poster, year, country, genres, seasons, tmdbId };
+  } catch(e) { return { poster:"", year: new Date().getFullYear(), country:"Korean", genres:[], seasons:{}, tmdbId:null }; }
 }
 
 // ── Add single drama ──────────────────────────────────────────
@@ -132,7 +156,7 @@ async function addDrama() {
   const manualYear    = parseInt(document.getElementById("yearInput").value);
   const manualCountry = document.getElementById("countryInput").value;
   const id = "d_" + Date.now();
-  const drama = { id, title, year: manualYear||tmdb.year, country: manualCountry||tmdb.country, genres: tmdb.genres, fav:false, addedAt:Date.now(), poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"" };
+  const drama = { id, title, year: manualYear||tmdb.year, country: manualCountry||tmdb.country, genres: tmdb.genres, fav:false, addedAt:Date.now(), poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"", seasons: tmdb.seasons||{} };
   await set(ref(db, `dramas/${id}`), drama);
   document.getElementById("titleInput").value = "";
   document.getElementById("yearInput").value = "";
@@ -158,7 +182,7 @@ async function bulkAdd() {
   for (const title of toAdd) {
     const tmdb = await fetchTMDB(title);
     const id = "d_" + Date.now() + "_" + Math.random().toString(36).slice(2,6);
-    await set(ref(db, `dramas/${id}`), { id, title, year:tmdb.year, country:tmdb.country, genres:tmdb.genres, fav:false, addedAt:Date.now()-(toAdd.length-done)*10, poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"" });
+    await set(ref(db, `dramas/${id}`), { id, title, year:tmdb.year, country:tmdb.country, genres:tmdb.genres, fav:false, addedAt:Date.now()-(toAdd.length-done)*10, poster:tmdb.poster, status:"", rating:0, episodes:"", totalEpisodes:"", rewatches:0, notes:"", ost:"", seasons:tmdb.seasons||{} });
     done++;
     document.getElementById("progBar").style.width = Math.round(done/toAdd.length*100)+"%";
     progress.querySelector("div").textContent = `Added ${done} of ${toAdd.length}${skipped?` (${skipped} skipped)`:""}... 🌸`;
@@ -546,7 +570,7 @@ function render() {
           <div class="genre-tags">${genreTags}</div>
           ${d.status?`<div class="status-badge"><span class="status-tag ${statusClass}">${statusLabel}</span></div>`:""}
           <div class="drama-meta">
-            <span class="drama-year">${d.year}${d.country?" · "+d.country:""}</span>
+            <span class="drama-year">${d.year}${d.country?" · "+d.country:""}${Object.keys(d.seasons||{}).length>1?" · "+Object.keys(d.seasons||{}).length+"S":""}</span>
             <button class="fav-btn" onclick="toggleFav('${d.id}',event)">${d.fav?"★":"☆"}</button>
           </div>
           <div class="stars-row">${starsHTML}</div>
