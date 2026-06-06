@@ -205,6 +205,11 @@ function openDetail(id) {
   document.getElementById("detailBg").classList.add("open");
 }
 
+function closeDetail() {
+  document.getElementById("detailBg").classList.remove("open");
+  currentDetailId = "";
+}
+
 function switchTab(tab) {
   currentTab = tab;
   renderDetail();
