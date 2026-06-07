@@ -266,20 +266,13 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--t
   left: -80px;
   z-index: 998;
   cursor: pointer;
-  width: 56px;
-  height: 38px;
+  width: 70px;
+  height: 45px;
+  transition: bottom 0.2s ease;
 }
-.guinea-pig:hover { transform: scale(1.15); }
-@keyframes gp-walk {
-  0%,100% { transform: translateY(0); }
-  50%      { transform: translateY(-3px); }
+.guinea-pig svg {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
 }
-@keyframes gp-run-right {
-  from { left: -80px; }
-  to   { left: calc(100vw + 80px); }
-}
-@keyframes gp-run-left {
-  from { left: calc(100vw + 80px); }
-  to   { left: -80px; }
-}
-.gp-body { animation: gp-walk 0.3s ease-in-out infinite; }
+.guinea-pig:hover svg { transform: scaleY(1.1) !important; }

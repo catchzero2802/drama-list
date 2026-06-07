@@ -614,18 +614,27 @@ function closeLightbox() { document.getElementById("lightboxBg").classList.remov
     if (running) return;
     running = true;
     const duration = 7000 + Math.random()*4000;
+
     if (direction === 1) {
+      // running right — head faces right (default SVG orientation)
       svg.style.transform = "scaleX(1)";
       gp.style.transition = "none";
       gp.style.left = "-80px";
       setTimeout(()=>{ gp.style.transition=`left ${duration}ms linear`; gp.style.left="calc(100vw + 80px)"; }, 50);
+      // stop midway to sniff
       const stopAt = (20+Math.random()*50)+"vw";
       setTimeout(()=>{
         gp.style.transition="left 0.5s ease-out"; gp.style.left=stopAt;
-        setTimeout(()=>{ gp.style.bottom="18px"; setTimeout(()=>{ gp.style.bottom="10px"; setTimeout(()=>{ gp.style.bottom="16px"; setTimeout(()=>{ gp.style.bottom="10px";
-          setTimeout(()=>{ gp.style.transition=`left ${duration*0.5}ms linear`; gp.style.left="calc(100vw + 80px)"; }, 300); },200); },200); },200); }, 400);
+        setTimeout(()=>{
+          gp.style.bottom="18px"; setTimeout(()=>{ gp.style.bottom="10px";
+          setTimeout(()=>{ gp.style.bottom="16px"; setTimeout(()=>{ gp.style.bottom="10px";
+          setTimeout(()=>{ gp.style.transition=`left ${duration*0.5}ms linear`; gp.style.left="calc(100vw + 80px)"; },300);
+          },200);},200);},200);
+        },400);
       }, duration*0.4);
+
     } else {
+      // running left — flip SVG so head still faces the direction of travel
       svg.style.transform = "scaleX(-1)";
       gp.style.transition = "none";
       gp.style.left = "calc(100vw + 80px)";
@@ -633,11 +642,16 @@ function closeLightbox() { document.getElementById("lightboxBg").classList.remov
       const stopAt = (30+Math.random()*50)+"vw";
       setTimeout(()=>{
         gp.style.transition="left 0.5s ease-out"; gp.style.left=stopAt;
-        setTimeout(()=>{ gp.style.bottom="18px"; setTimeout(()=>{ gp.style.bottom="10px"; setTimeout(()=>{ gp.style.bottom="16px"; setTimeout(()=>{ gp.style.bottom="10px";
-          setTimeout(()=>{ gp.style.transition=`left ${duration*0.5}ms linear`; gp.style.left="-80px"; }, 300); },200); },200); },200); }, 400);
+        setTimeout(()=>{
+          gp.style.bottom="18px"; setTimeout(()=>{ gp.style.bottom="10px";
+          setTimeout(()=>{ gp.style.bottom="16px"; setTimeout(()=>{ gp.style.bottom="10px";
+          setTimeout(()=>{ gp.style.transition=`left ${duration*0.5}ms linear`; gp.style.left="-80px"; },300);
+          },200);},200);},200);
+        },400);
       }, duration*0.4);
     }
-    setTimeout(()=>{ direction = direction===1?-1:1; running=false; }, duration+1000);
+
+    setTimeout(()=>{ direction = direction===1?-1:1; running=false; }, duration+1500);
   }
 
   window.gpSqueak = function() { showToast("🐾 wheek wheek!"); if(!running) runAcross(); };
