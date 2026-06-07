@@ -266,8 +266,8 @@ body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--t
   left: -80px;
   z-index: 998;
   cursor: pointer;
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 90px;
   transition: bottom 0.2s ease;
 }
-.guinea-pig:hover { transform: scale(1.15); }
+.guinea-pig:hover { transform: scale(1.1); }

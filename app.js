@@ -654,7 +654,7 @@ function closeLightbox() { document.getElementById("lightboxBg").classList.remov
     setTimeout(()=>{ direction = direction===1?-1:1; running=false; }, duration+1500);
   }
 
-  window.gpSqueak = function() { showToast("🐾 wheek wheek!"); if(!running) runAcross(); };
+  window.gpSqueak = function() { showToast("maomao: 看屁看 🐾"); if(!running) runAcross(); };
   setTimeout(()=>{ runAcross(); setInterval(()=>{ if(!running) runAcross(); }, 30000+Math.random()*20000); }, 4000);
 })();
 
