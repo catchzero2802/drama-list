@@ -607,7 +607,7 @@ function closeLightbox() { document.getElementById("lightboxBg").classList.remov
 (function() {
   const gp = document.getElementById("guineaPig");
   if (!gp) return;
-  const svg = gp.querySelector("svg");
+  const img = gp.querySelector("img");
   let direction = 1, running = false;
 
   function runAcross() {
@@ -617,7 +617,7 @@ function closeLightbox() { document.getElementById("lightboxBg").classList.remov
 
     if (direction === 1) {
       // running right — head faces right (default SVG orientation)
-      svg.style.transform = "scaleX(1)";
+      img.style.transform = "scaleX(1)";
       gp.style.transition = "none";
       gp.style.left = "-80px";
       setTimeout(()=>{ gp.style.transition=`left ${duration}ms linear`; gp.style.left="calc(100vw + 80px)"; }, 50);
@@ -635,7 +635,7 @@ function closeLightbox() { document.getElementById("lightboxBg").classList.remov
 
     } else {
       // running left — flip SVG so head still faces the direction of travel
-      svg.style.transform = "scaleX(-1)";
+      img.style.transform = "scaleX(-1)";
       gp.style.transition = "none";
       gp.style.left = "calc(100vw + 80px)";
       setTimeout(()=>{ gp.style.transition=`left ${duration}ms linear`; gp.style.left="-80px"; }, 50);
